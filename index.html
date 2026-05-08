@@ -23,6 +23,8 @@
     </style>
 </head>
 <body>
+
+<div class="top-nav"><h1>My Kindle</h1></div>
 <div class="shelf-container" id="library-view"><div class="wheel" id="shelf"></div></div>
 
 <div id="reader">
@@ -39,13 +41,19 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cloudflare.com';
     let currentDoc = null, currPage = 1, currentPath = "";
 
-    // The Fetch Fix: Adds a timestamp so it NEVER loads an old version of the list
-    fetch('pdf-list.json?t=' + new Date().getTime())
-        .then(res => res.json())
+    // This part fixes the URL issue automatically
+    const repoName = window.location.pathname.split('/')[1];
+    const jsonPath = window.location.hostname.includes('github.io') ? `/${repoName}/pdf-list.json` : 'pdf-list.json';
+
+    fetch(jsonPath + '?t=' + Date.now())
+        .then(res => {
+            if (!res.ok) throw new Error('Could not find the book list');
+            return res.json();
+        })
         .then(pdfs => {
             const shelf = document.getElementById('shelf');
             if (!pdfs || pdfs.length === 0) {
-                shelf.innerHTML = "<h2>Found the list, but it's empty. Check folder name!</h2>";
+                shelf.innerHTML = "<h2>The list is empty. Add PDFs to your folder!</h2>";
                 return;
             }
             pdfs.forEach(path => {
@@ -58,8 +66,8 @@
             });
         })
         .catch(err => {
-            document.getElementById('shelf').innerHTML = "<h2>Error loading book list. Try Refreshing!</h2>";
-            console.error("Fetch error:", err);
+            document.getElementById('shelf').innerHTML = "<h2>Error: Books not found. Refreshing might help!</h2>";
+            console.error(err);
         });
 
     async function openBook(path, title) {
@@ -69,15 +77,10 @@
         document.querySelector('.top-nav').style.display = 'none';
         document.getElementById('reader').style.display = 'block';
 
-        try {
-            const loadingTask = pdfjsLib.getDocument(path);
-            currentDoc = await loadingTask.promise;
-            currPage = parseInt(localStorage.getItem('page-' + path)) || 1;
-            renderPage(currPage);
-        } catch (e) {
-            alert("Could not open PDF. Check if the file is still in the 'Pdf' folder.");
-            closeReader();
-        }
+        const loadingTask = pdfjsLib.getDocument(path);
+        currentDoc = await loadingTask.promise;
+        currPage = parseInt(localStorage.getItem('page-' + path)) || 1;
+        renderPage(currPage);
     }
 
     async function renderPage(num) {
