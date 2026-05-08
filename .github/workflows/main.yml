@@ -1,0 +1,19 @@
+name: Generate PDF List
+on: [push]
+jobs:
+  update-list:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: List PDFs to JSON
+        run: |
+          echo "[" > pdf-list.json
+          for file in library/*.pdf; do
+            echo "  \"$file\"," >> pdf-list.json
+          done
+          sed -i '$ s/,$//' pdf-list.json # Remove last comma
+          echo "]" >> pdf-list.json
+      - name: Commit and Push
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update PDF library list"
