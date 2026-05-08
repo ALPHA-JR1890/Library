@@ -10,9 +10,9 @@ jobs:
       - name: Create JSON List
         run: |
           echo "[" > pdf-list.json
-          # This finds PDFs in the library folder
-          find library -name "*.pdf" | sed 's/^/"/;s/$/",/' >> pdf-list.json
-          # Fixes the last comma so the file isn't broken
+          # Updated to look in the 'Pdf' folder
+          find Pdf -name "*.pdf" | sed 's/^/"/;s/$/",/' >> pdf-list.json
+          # Fixes the last comma
           sed -i '$ s/,$//' pdf-list.json
           echo "]" >> pdf-list.json
       - name: Save to Repo
@@ -20,5 +20,5 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@://github.com"
           git add pdf-list.json
-          git commit -m "Update PDF library list" || echo "No changes to commit"
+          git commit -m "Update PDF list from Pdf folder" || echo "No changes"
           git push
