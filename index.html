@@ -2,52 +2,55 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Kindle Library</title>
+    <title>My Kindle Library</title>
     <link href="https://googleapis.com" rel="stylesheet">
     <script src="https://cloudflare.com"></script>
     <style>
-        :root { --gold: #d4af37; --bg: #121212; }
-        body { font-family: 'Happy Monkey', cursive; background: var(--bg); color: white; margin: 0; overflow: hidden; }
+        :root { --paper: #fbfbfb; --ink: #333333; --border: #e0e0e0; }
+        body { font-family: 'Happy Monkey', cursive; background: var(--paper); color: var(--ink); margin: 0; overflow: hidden; }
         
-        /* Library Wheel */
+        /* Library View */
         .shelf-container { height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .wheel { display: flex; overflow-x: auto; gap: 30px; padding: 50px; width: 90vw; scroll-snap-type: x mandatory; }
-        .wheel::-webkit-scrollbar { display: none; }
-        .book-card { 
-            flex: 0 0 180px; height: 260px; background: #2c3e50; border-radius: 8px; 
-            scroll-snap-align: center; cursor: pointer; transition: 0.3s; 
-            display: flex; flex-direction: column; justify-content: space-between;
-            border-left: 10px solid #1a252f; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-        }
-        .book-card:hover { transform: scale(1.1); border-color: var(--gold); }
-        .title-text { padding: 15px; text-align: center; font-size: 0.9rem; pointer-events: none; }
+        .wheel { display: flex; overflow-x: auto; gap: 40px; padding: 60px; width: 85vw; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+        .wheel::-webkit-scrollbar { height: 6px; }
+        .wheel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 
-        /* Custom Kindle Reader */
-        #reader { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; display: none; z-index: 100; }
-        .reader-nav { position: absolute; top: 0; width: 100%; display: flex; justify-content: space-between; padding: 10px; background: rgba(0,0,0,0.6); z-index: 10; }
+        .book-card { 
+            flex: 0 0 180px; height: 260px; background: white; border-radius: 4px; 
+            scroll-snap-align: center; cursor: pointer; transition: 0.2s; 
+            display: flex; flex-direction: column; justify-content: space-between;
+            border: 1px solid var(--border); border-left: 12px solid #555; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .book-card:hover { transform: translateY(-10px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
+        .title-text { padding: 20px; text-align: center; font-size: 1rem; color: var(--ink); line-height: 1.4; }
+
+        /* Reader Overlay */
+        #reader { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--paper); display: none; z-index: 100; }
+        .reader-nav { position: absolute; top: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); background: var(--paper); z-index: 10; }
         
-        /* Navigation Zones */
-        .nav-zone { position: absolute; top: 0; height: 100%; width: 30%; z-index: 5; cursor: pointer; }
+        /* Tap Zones for Page Turning */
+        .nav-zone { position: absolute; top: 0; height: 100%; width: 25%; z-index: 5; cursor: pointer; }
         .nav-left { left: 0; }
         .nav-right { right: 0; }
         
-        canvas { display: block; margin: auto; max-height: 100vh; max-width: 100vw; }
-        .close-btn { color: var(--gold); font-size: 30px; cursor: pointer; padding: 0 20px; }
+        canvas { display: block; margin: 40px auto 0; max-height: calc(100vh - 40px); max-width: 100vw; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
+        .close-btn { color: #888; font-size: 32px; cursor: pointer; padding: 0 25px; }
+        .book-info { padding-left: 25px; font-size: 0.9rem; color: #777; }
     </style>
 </head>
 <body>
 
 <div class="shelf-container" id="library-view">
-    <h1 style="color: var(--gold)">My Kindle</h1>
+    <h1 style="font-weight: normal; letter-spacing: 1px;">From Your Library</h1>
     <div class="wheel" id="shelf"></div>
 </div>
 
 <div id="reader">
     <div class="reader-nav">
-        <span id="reader-title"></span>
+        <span class="book-info" id="reader-title"></span>
         <span class="close-btn" onclick="closeReader()">&times;</span>
     </div>
-    <!-- Click Zones -->
     <div class="nav-zone nav-left" onclick="prevPage()"></div>
     <div class="nav-zone nav-right" onclick="nextPage()"></div>
     <canvas id="pdf-canvas"></canvas>
@@ -60,9 +63,13 @@
     let currPage = 1;
     let currentPath = "";
 
-    // 1. Load Library
+    // Load Books from JSON
     fetch('pdf-list.json').then(res => res.json()).then(pdfs => {
         const shelf = document.getElementById('shelf');
+        if (!pdfs || pdfs.length === 0) {
+            shelf.innerHTML = "<p>No books found. Check your 'Pdf' folder!</p>";
+            return;
+        }
         pdfs.forEach(path => {
             const cleanName = path.split('/').pop().replace('.pdf', '').replace(/_/g, ' ');
             const card = document.createElement('div');
@@ -73,7 +80,6 @@
         });
     });
 
-    // 2. Open Book & Restore Page
     async function openBook(path, title) {
         currentPath = path;
         document.getElementById('reader-title').innerText = title;
@@ -82,29 +88,24 @@
 
         const loadingTask = pdfjsLib.getDocument(path);
         currentDoc = await loadingTask.promise;
-        
-        // Load saved page from localStorage
         currPage = parseInt(localStorage.getItem('page-' + path)) || 1;
         renderPage(currPage);
     }
 
-    // 3. Render PDF to Canvas
     async function renderPage(num) {
         const page = await currentDoc.getPage(num);
         const canvas = document.getElementById('pdf-canvas');
         const ctx = canvas.getContext('2d');
         
-        const viewport = page.getViewport({ scale: 1.5 });
+        // Adjust scale to fit screen neatly
+        const viewport = page.getViewport({ scale: 1.2 });
         canvas.height = viewport.height;
         canvas.width = viewport.width;
 
         await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-        
-        // Save current page
         localStorage.setItem('page-' + currentPath, num);
     }
 
-    // 4. Kindle Navigation
     function nextPage() { if (currPage < currentDoc.numPages) renderPage(++currPage); }
     function prevPage() { if (currPage > 1) renderPage(--currPage); }
 
