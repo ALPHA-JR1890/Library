@@ -8,53 +8,26 @@
     <style>
         :root { --paper: #fefefe; --ink: #222; --border: #ddd; }
         body { font-family: 'Happy Monkey', cursive; background: var(--paper); color: var(--ink); margin: 0; overflow: hidden; }
-        
-        /* Top Title Bar */
         .top-nav { width: 100%; text-align: center; padding: 20px 0; border-bottom: 1px solid var(--border); background: var(--paper); }
         .top-nav h1 { margin: 0; font-size: 1.5rem; font-weight: normal; letter-spacing: 2px; }
-
-        /* The Selection Wheel */
         .shelf-container { height: calc(100vh - 80px); display: flex; align-items: center; justify-content: center; }
-        .wheel { display: flex; overflow-x: auto; gap: 35px; padding: 40px; width: 90vw; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
-        .wheel::-webkit-scrollbar { height: 4px; }
-        .wheel::-webkit-scrollbar-thumb { background: var(--border); }
-
-        .book-card { 
-            flex: 0 0 160px; height: 240px; background: white; border-radius: 2px; 
-            scroll-snap-align: center; cursor: pointer; transition: 0.2s; 
-            display: flex; flex-direction: column; justify-content: space-between;
-            border: 1px solid var(--border); border-left: 10px solid #444; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        .book-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: #999; }
-        .title-text { padding: 15px; text-align: center; font-size: 0.9rem; line-height: 1.3; }
-
-        /* Fullscreen Reader */
+        .wheel { display: flex; overflow-x: auto; gap: 35px; padding: 40px; width: 90vw; scroll-snap-type: x mandatory; }
+        .book-card { flex: 0 0 160px; height: 240px; background: white; border-radius: 2px; scroll-snap-align: center; cursor: pointer; border: 1px solid var(--border); border-left: 10px solid #444; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .title-text { padding: 15px; text-align: center; font-size: 0.9rem; }
         #reader { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--paper); display: none; z-index: 100; }
         .reader-header { position: absolute; top: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); z-index: 10; background: var(--paper); }
-        
         .nav-zone { position: absolute; top: 0; height: 100%; width: 25%; z-index: 5; cursor: pointer; }
-        .nav-left { left: 0; }
-        .nav-right { right: 0; }
-        
+        .nav-left { left: 0; } .nav-right { right: 0; }
         canvas { display: block; margin: 60px auto 0; max-height: calc(100vh - 60px); max-width: 100vw; }
         .close-btn { color: #aaa; font-size: 30px; cursor: pointer; padding: 0 20px; }
-        .reading-title { padding-left: 20px; font-size: 0.9rem; color: #666; }
     </style>
 </head>
 <body>
-
-<div class="top-nav">
-    <h1>My Kindle</h1>
-</div>
-
-<div class="shelf-container" id="library-view">
-    <div class="wheel" id="shelf"></div>
-</div>
+<div class="shelf-container" id="library-view"><div class="wheel" id="shelf"></div></div>
 
 <div id="reader">
     <div class="reader-header">
-        <span class="reading-title" id="reader-title"></span>
+        <span style="padding-left:20px" id="reader-title"></span>
         <span class="close-btn" onclick="closeReader()">&times;</span>
     </div>
     <div class="nav-zone nav-left" onclick="prevPage()"></div>
@@ -64,41 +37,47 @@
 
 <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cloudflare.com';
+    let currentDoc = null, currPage = 1, currentPath = "";
 
-    let currentDoc = null;
-    let currPage = 1;
-    let currentPath = "";
-
-    // Load Books
-    fetch('pdf-list.json?v=' + Date.now()).then(res => res.json()).then(pdfs => {
-        const shelf = document.getElementById('shelf');
-        if (!pdfs || pdfs.length === 0) {
-            shelf.innerHTML = "<p>No PDFs found in the 'Pdf' folder.</p>";
-            return;
-        }
-        pdfs.forEach(path => {
-            const cleanName = path.split('/').pop().replace('.pdf', '').replace(/_/g, ' ');
-            const card = document.createElement('div');
-            card.className = 'book-card';
-            card.innerHTML = `<div class="title-text">${cleanName}</div>`;
-            card.onclick = () => openBook(path, cleanName);
-            shelf.appendChild(card);
+    // The Fetch Fix: Adds a timestamp so it NEVER loads an old version of the list
+    fetch('pdf-list.json?t=' + new Date().getTime())
+        .then(res => res.json())
+        .then(pdfs => {
+            const shelf = document.getElementById('shelf');
+            if (!pdfs || pdfs.length === 0) {
+                shelf.innerHTML = "<h2>Found the list, but it's empty. Check folder name!</h2>";
+                return;
+            }
+            pdfs.forEach(path => {
+                const cleanName = path.split('/').pop().replace('.pdf', '').replace(/_/g, ' ');
+                const card = document.createElement('div');
+                card.className = 'book-card';
+                card.innerHTML = `<div class="title-text">${cleanName}</div>`;
+                card.onclick = () => openBook(path, cleanName);
+                shelf.appendChild(card);
+            });
+        })
+        .catch(err => {
+            document.getElementById('shelf').innerHTML = "<h2>Error loading book list. Try Refreshing!</h2>";
+            console.error("Fetch error:", err);
         });
-    }).catch(err => {
-        document.getElementById('shelf').innerHTML = "<p>Failed to load book list.</p>";
-    });
 
     async function openBook(path, title) {
         currentPath = path;
         document.getElementById('reader-title').innerText = title;
-        document.getElementById('library-view').parentElement.style.display = 'none';
+        document.getElementById('library-view').style.display = 'none';
         document.querySelector('.top-nav').style.display = 'none';
         document.getElementById('reader').style.display = 'block';
 
-        const loadingTask = pdfjsLib.getDocument(path);
-        currentDoc = await loadingTask.promise;
-        currPage = parseInt(localStorage.getItem('page-' + path)) || 1;
-        renderPage(currPage);
+        try {
+            const loadingTask = pdfjsLib.getDocument(path);
+            currentDoc = await loadingTask.promise;
+            currPage = parseInt(localStorage.getItem('page-' + path)) || 1;
+            renderPage(currPage);
+        } catch (e) {
+            alert("Could not open PDF. Check if the file is still in the 'Pdf' folder.");
+            closeReader();
+        }
     }
 
     async function renderPage(num) {
@@ -108,17 +87,15 @@
         const viewport = page.getViewport({ scale: 1.3 });
         canvas.height = viewport.height;
         canvas.width = viewport.width;
-
         await page.render({ canvasContext: ctx, viewport: viewport }).promise;
         localStorage.setItem('page-' + currentPath, num);
     }
 
     function nextPage() { if (currPage < currentDoc.numPages) renderPage(++currPage); }
     function prevPage() { if (currPage > 1) renderPage(--currPage); }
-
     function closeReader() {
         document.getElementById('reader').style.display = 'none';
-        document.getElementById('library-view').parentElement.style.display = 'flex';
+        document.getElementById('library-view').style.display = 'flex';
         document.querySelector('.top-nav').style.display = 'block';
         currentDoc = null;
     }
