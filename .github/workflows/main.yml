@@ -3,17 +3,22 @@ on: [push]
 jobs:
   update-list:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: List PDFs to JSON
+      - name: Create JSON List
         run: |
           echo "[" > pdf-list.json
-          for file in library/*.pdf; do
-            echo "  \"$file\"," >> pdf-list.json
-          done
-          sed -i '$ s/,$//' pdf-list.json # Remove last comma
+          # This finds PDFs in the library folder
+          find library -name "*.pdf" | sed 's/^/"/;s/$/",/' >> pdf-list.json
+          # Fixes the last comma so the file isn't broken
+          sed -i '$ s/,$//' pdf-list.json
           echo "]" >> pdf-list.json
-      - name: Commit and Push
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Update PDF library list"
+      - name: Save to Repo
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@://github.com"
+          git add pdf-list.json
+          git commit -m "Update PDF library list" || echo "No changes to commit"
+          git push
