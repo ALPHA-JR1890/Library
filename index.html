@@ -2,52 +2,117 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My PDF Library</title>
+    <title>My Kindle Library</title>
+    <link href="https://googleapis.com" rel="stylesheet">
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f0f0; display: flex; flex-wrap: wrap; gap: 25px; padding: 40px; justify-content: center; }
-        .book { 
-            width: 150px; height: 210px; background: #fff; 
-            box-shadow: 0 10px 20px rgba(0,0,0,0.15); 
-            border-left: 12px solid #34495e; border-radius: 3px 8px 8px 3px; 
-            cursor: pointer; display: flex; align-items: center; 
-            justify-content: center; text-align: center; padding: 15px; 
-            font-weight: 600; color: #2c3e50; transition: transform 0.2s ease;
+        :root { --bg: #1a1a1a; --gold: #d4af37; }
+        body { font-family: 'Happy Monkey', system-ui; background: var(--bg); color: white; margin: 0; overflow-x: hidden; }
+        
+        h1 { text-align: center; margin-top: 40px; color: var(--gold); }
+
+        /* The Selection Wheel */
+        .wheel-container {
+            display: flex; overflow-x: scroll; padding: 50px; gap: 40px;
+            scroll-snap-type: x mandatory; align-items: center;
         }
-        .book:hover { transform: translateY(-10px) scale(1.02); background: #fafafa; }
+        .wheel-container::-webkit-scrollbar { height: 8px; }
+        .wheel-container::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 10px; }
+
+        .book-card {
+            flex: 0 0 200px; height: 300px; background: #2c3e50; 
+            scroll-snap-align: center; border-radius: 10px; cursor: pointer;
+            transition: transform 0.3s; position: relative;
+            display: flex; flex-direction: column; justify-content: space-between;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5); border-left: 8px solid #1a252f;
+        }
+        .book-card:hover { transform: scale(1.1); border-color: var(--gold); }
+        
+        .book-title { padding: 15px; font-size: 1.1rem; text-align: center; }
+
+        /* Progress Bar */
+        .progress-container { background: #444; height: 10px; width: 100%; border-radius: 0 0 5px 5px; }
+        .progress-bar { background: var(--gold); height: 100%; width: 0%; border-radius: 0 0 5px 5px; transition: 0.3s; }
+
+        /* Fullscreen Reader */
+        #reader-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); display: none; flex-direction: column; z-index: 100;
+        }
+        .reader-header { display: flex; justify-content: space-between; padding: 15px 30px; background: #111; }
+        .close-btn { font-size: 30px; cursor: pointer; color: var(--gold); }
+        
+        iframe { flex-grow: 1; border: none; width: 100%; }
     </style>
 </head>
 <body>
-    <div id="shelf" style="display: contents;"></div>
+
+    <h1>My Digital Library</h1>
+    <div class="wheel-container" id="shelf"></div>
+
+    <!-- Reader Overlay -->
+    <div id="reader-overlay">
+        <div class="reader-header">
+            <span id="current-title">Book Title</span>
+            <span class="close-btn" onclick="closeBook()">&times;</span>
+        </div>
+        <iframe id="pdf-frame"></iframe>
+    </div>
 
     <script>
-        // Fetch the list created by the GitHub Action
-        fetch('pdf-list.json')
-            .then(response => response.json())
-            .then(pdfs => {
-                const shelf = document.getElementById('shelf');
-                if (pdfs.length === 0 || (pdfs.length === 1 && pdfs[0] === "[")) {
-                    shelf.innerHTML = "<h1>No PDFs found in the 'Pdf' folder yet!</h1>";
-                    return;
-                }
+        const shelf = document.getElementById('shelf');
+        const overlay = document.getElementById('reader-overlay');
+        const frame = document.getElementById('pdf-frame');
+        const currentTitleDisplay = document.getElementById('current-title');
 
+        fetch('pdf-list.json')
+            .then(res => res.json())
+            .then(pdfs => {
                 pdfs.forEach(path => {
-                    // Extract the filename from the path (e.g., "Pdf/book.pdf" -> "book")
-                    const fileName = path.split('/').pop().replace('.pdf', '');
+                    // Clean the name: Remove .pdf, replace _ with space
+                    const rawName = path.split('/').pop().replace('.pdf', '');
+                    const cleanName = rawName.replace(/_/g, ' ');
+
+                    // Get saved progress from local data
+                    const savedProgress = localStorage.getItem(path) || 0;
+
+                    const card = document.createElement('div');
+                    card.className = 'book-card';
+                    card.innerHTML = `
+                        <div class="book-title">${cleanName}</div>
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: ${savedProgress}%"></div>
+                        </div>
+                    `;
                     
-                    const book = document.createElement('div');
-                    book.className = 'book';
-                    book.innerText = fileName;
-                    
-                    // Click to open the PDF in a new tab
-                    book.onclick = () => window.open(path, '_blank');
-                    
-                    shelf.appendChild(book);
+                    card.onclick = () => openBook(path, cleanName);
+                    shelf.appendChild(card);
                 });
-            })
-            .catch(err => {
-                document.body.innerHTML = "<h1>Loading... (Wait for the Action to finish)</h1>";
             });
+
+        function openBook(url, title) {
+            currentTitleDisplay.innerText = title;
+            // PDF.js uses #page= to jump to a page
+            const lastPage = localStorage.getItem(url + '-page') || 1;
+            frame.src = `${url}#page=${lastPage}`;
+            overlay.style.display = 'flex';
+            
+            // Listen for clicks inside the iframe to simulate "saving" 
+            // Note: True page tracking requires a heavy library, 
+            // so we prompt to save progress when closing.
+        }
+
+        function closeBook() {
+            const currentPath = frame.src.split('#')[0];
+            const page = prompt("What page are you on? (To save progress)");
+            if (page) {
+                localStorage.setItem(currentTitleDisplay.innerText + '-page', page);
+                // Simple math for progress bar (assuming 200 page average for visual)
+                localStorage.setItem(currentPath, Math.min((page/200)*100, 100));
+            }
+            overlay.style.display = 'none';
+            frame.src = '';
+            location.reload(); // Refresh to update progress bars
+        }
     </script>
 </body>
 </html>
