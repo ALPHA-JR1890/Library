@@ -50,12 +50,9 @@ html,body{
 #title{
   position:absolute;
   top:25px;
-  left:50%;
-  transform:translateX(-50%);
-  max-width:90vw;
+  left:0;
+  right:0;
   text-align:center;
-  white-space:nowrap;
-  overflow:hidden;
 }
 
 .carousel{
@@ -80,8 +77,8 @@ html,body{
   align-items:center;
   opacity:.4;
   transform:scale(.85);
+  transition:.4s ease;
   cursor:pointer;
-  transition:.4s;
 }
 
 .book.active{
@@ -93,8 +90,9 @@ html,body{
   width:150px;
   height:220px;
   background:#ddd;
-  border-radius:5px;
+  position:relative;
   overflow:hidden;
+  border-radius:5px;
   box-shadow:-5px 0 0 var(--accent), 0 10px 25px var(--shadow);
   transition:width .4s, height .4s;
 }
@@ -102,6 +100,11 @@ html,body{
 .book.active .cover{
   width:200px;
   height:280px;
+}
+
+.cover canvas{
+  width:100%;
+  height:100%;
 }
 
 /* ================= READER ================= */
@@ -125,7 +128,7 @@ html,body{
   top:0;
   left:0;
   right:0;
-  padding:16px 20px;
+  padding:15px 20px;
   z-index:10;
 }
 
@@ -144,17 +147,6 @@ html,body{
   transition:width .3s ease;
 }
 
-/* TITLE (AUTO SHRINK) */
-
-.reader-title{
-  font-size:1rem;
-  text-align:center;
-  white-space:nowrap;
-  overflow:hidden;
-  width:100%;
-  margin-bottom:10px;
-}
-
 /* PAGE AREA */
 
 .page-wrap{
@@ -162,34 +154,51 @@ html,body{
   display:flex;
   align-items:center;
   justify-content:center;
+  overflow:hidden;
   position:relative;
 }
+
+/* CANVAS */
 
 #pdf{
   max-width:100%;
   max-height:100%;
+  display:block;
 }
 
-/* ================= PAGE FLIP ================= */
+/* ================= PAGE TURN ANIMATION ================= */
 
-.flip{
+.page-flip-overlay{
   position:absolute;
   inset:0;
   background:var(--bg);
   transform-origin:left;
+  transform:rotateY(0deg);
   opacity:0;
   pointer-events:none;
 }
 
-.flip.active{
-  animation:flip 1.5s var(--ease);
+/* ACTIVE FLIP */
+.page-flip-overlay.active{
+  animation:flipPage 1.5s var(--ease);
 }
 
-@keyframes flip{
-  0%{transform:rotateY(0deg);opacity:0;}
-  20%{opacity:1;}
-  50%{transform:rotateY(-90deg);}
-  100%{transform:rotateY(-180deg);opacity:0;}
+@keyframes flipPage{
+  0%{
+    transform:rotateY(0deg);
+    opacity:0;
+  }
+  15%{
+    opacity:1;
+  }
+  50%{
+    transform:rotateY(-90deg);
+    opacity:1;
+  }
+  100%{
+    transform:rotateY(-180deg);
+    opacity:0;
+  }
 }
 
 /* NAV */
@@ -211,7 +220,6 @@ html,body{
 
 <div id="library">
   <div id="title"></div>
-
   <div class="carousel">
     <div class="track" id="track"></div>
   </div>
@@ -220,21 +228,20 @@ html,body{
 <div id="reader">
 
   <div class="topbar">
-
-    <div class="reader-title" id="reader-title"></div>
-
     <div class="progress">
       <div class="progress-fill" id="fill"></div>
     </div>
-
   </div>
 
   <div id="left" class="nav"></div>
   <div id="right" class="nav"></div>
 
   <div class="page-wrap">
-    <div class="flip" id="flip"></div>
+
+    <div class="page-flip-overlay" id="flip"></div>
+
     <canvas id="pdf"></canvas>
+
   </div>
 
 </div>
@@ -248,18 +255,17 @@ async function getPdfjs(){
   }
 }
 
-const track=document.getElementById('track');
-const title=document.getElementById('title');
+const track = document.getElementById('track');
+const title = document.getElementById('title');
 
-const reader=document.getElementById('reader');
-const readerTitle=document.getElementById('reader-title');
+const reader = document.getElementById('reader');
+const canvas = document.getElementById('pdf');
 
-const canvas=document.getElementById('pdf');
-const fill=document.getElementById('fill');
-const flip=document.getElementById('flip');
+const flip = document.getElementById('flip');
+const fill = document.getElementById('fill');
 
-const left=document.getElementById('left');
-const right=document.getElementById('right');
+const left = document.getElementById('left');
+const right = document.getElementById('right');
 
 let books=[];
 let currentDoc;
@@ -267,29 +273,28 @@ let page=1;
 let currentBook;
 let focused=0;
 
-/* ================= LOAD ================= */
-
 async function load(){
 
-  const res=await fetch('./pdf-list.json');
-  books=await res.json();
+  const res = await fetch('./pdf-list.json');
+  books = await res.json();
 
-  const pdfjs=await getPdfjs();
+  const pdfjs = await getPdfjs();
 
-  pdfjs.GlobalWorkerOptions.workerSrc=
+  pdfjs.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
 
   books.forEach((b,i)=>{
 
-    const el=document.createElement('div');
+    const el = document.createElement('div');
     el.className='book';
     el.dataset.i=i;
 
     el.innerHTML=`
-      <div class="cover"></div>
+      <div class="cover" id="c${i}"></div>
     `;
 
     track.appendChild(el);
+
   });
 
   track.onclick=(e)=>{
@@ -299,8 +304,9 @@ async function load(){
 
     const i=+b.dataset.i;
 
-    if(i===focused) open(i);
-    else{
+    if(i===focused){
+      open(i);
+    }else{
       focused=i;
       update();
     }
@@ -308,8 +314,6 @@ async function load(){
 
   update();
 }
-
-/* ================= UPDATE ================= */
 
 function update(){
 
@@ -319,42 +323,33 @@ function update(){
   });
 
   title.textContent=books[focused]?.title||'';
-  fitText(title, 24);
 }
-
-/* ================= OPEN ================= */
 
 async function open(i){
 
-  const pdfjs=await getPdfjs();
+  const pdfjs = await getPdfjs();
 
-  currentBook=books[i];
+  currentBook = books[i];
 
-  currentDoc=
-  await pdfjs.getDocument('./'+currentBook.path).promise;
+  currentDoc = await pdfjs.getDocument('./'+currentBook.path).promise;
 
-  page=Number(localStorage.getItem(currentBook.path))||1;
+  page = Number(localStorage.getItem(currentBook.path)) || 1;
 
   reader.classList.add('active');
-
-  readerTitle.textContent=currentBook.title;
-  fitText(readerTitle, 18);
 
   render(page);
 }
 
-/* ================= RENDER ================= */
-
 async function render(n){
 
-  triggerFlip();
+  triggerFlip(); // 🔥 1.5s animation
 
-  const p=await currentDoc.getPage(n);
+  const p = await currentDoc.getPage(n);
 
-  const vp=p.getViewport({scale:1.5});
+  const vp = p.getViewport({scale:1.4});
 
-  canvas.width=vp.width;
-  canvas.height=vp.height;
+  canvas.width = vp.width;
+  canvas.height = vp.height;
 
   await p.render({
     canvasContext:canvas.getContext('2d'),
@@ -365,40 +360,26 @@ async function render(n){
 
   localStorage.setItem(currentBook.path,page);
 
-  const percent=
-  ((page-1)/(currentDoc.numPages-1))*100;
-
-  fill.style.width=percent+'%';
+  fill.style.width =
+  ((page-1)/(currentDoc.numPages-1))*100+'%';
 }
 
-/* ================= FLIP ================= */
+/* ================= PAGE TURN ANIMATION ================= */
 
 function triggerFlip(){
+
   flip.classList.remove('active');
-  void flip.offsetWidth;
+  void flip.offsetWidth; // restart animation
   flip.classList.add('active');
 }
 
-/* ================= NAV ================= */
+left.onclick=()=>{
+  if(page>1) render(page-1);
+};
 
-left.onclick=()=>page>1&&render(page-1);
-right.onclick=()=>page<currentDoc.numPages&&render(page+1);
-
-/* ================= AUTO FIT TEXT ================= */
-
-function fitText(el, max){
-
-  let size=max;
-
-  el.style.fontSize=size+'px';
-
-  while(el.scrollWidth>el.clientWidth && size>10){
-    size--;
-    el.style.fontSize=size+'px';
-  }
-}
-
-/* ================= START ================= */
+right.onclick=()=>{
+  if(page<currentDoc.numPages) render(page+1);
+};
 
 load();
 
