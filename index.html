@@ -694,7 +694,8 @@ async function renderThumbnail(pdfjsLib,i){
     const percent = doc.numPages > 1 ? ((savedPage-1)/(doc.numPages-1))*100 : 0;
     const fill = document.getElementById('fill-'+i);
     if(fill) fill.style.width=percent+'%';
-    const page = await doc.getPage(1);
+    const coverPage = Math.min(book.cover || 1, doc.numPages);
+    const page = await doc.getPage(coverPage);
     const vp = page.getViewport({scale:0.42});
     const c = document.createElement('canvas');
     c.width=vp.width; c.height=vp.height;
