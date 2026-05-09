@@ -1,62 +1,62 @@
 [
   {
     "path": "Pdf/ 7 Harry Potter andThe Deathly Hallows.pdf",
-    "title": "Harry Potter and the Deathly Hallows",
-    "cover": 2
+    "title": "7 Harry Potter andThe Deathly Hallows",
+    "cover": 1
   },
   {
     "path": "Pdf/1 Harry Potter and the Sorcerer's Stone.pdf",
-    "title": "The Sorcerer's Stone",
-    "cover": 2
+    "title": "1 Harry Potter and the Sorcerer's Stone",
+    "cover": 1
   },
   {
     "path": "Pdf/2 Harry Potter and the Chamber of Secrets.pdf",
-    "title": "The Chamber of Secrets",
-    "cover": 2
+    "title": "2 Harry Potter and the Chamber of Secrets",
+    "cover": 1
   },
   {
     "path": "Pdf/3 Harry Potter and the Prisoner of Azkaban.pdf",
-    "title": "The Prisoner of Azkaban",
-    "cover": 2
+    "title": "3 Harry Potter and the Prisoner of Azkaban",
+    "cover": 1
   },
   {
     "path": "Pdf/4 Harry Potter and the Goblet of Fire.pdf",
-    "title": "The Goblet of Fire",
-    "cover": 2
+    "title": "4 Harry Potter and the Goblet of Fire",
+    "cover": 1
   },
   {
     "path": "Pdf/5 Harry Potter and the Order of the Phoenix.pdf",
-    "title": "\u2014 CHAPTER ONE \u2014",
+    "title": "5 Harry Potter and the Order of the Phoenix",
     "cover": 1
   },
   {
     "path": "Pdf/6 Harry Potter and the Half-Blood Prince Book .pdf",
-    "title": "Harry Potter and the Half-Blood Prince",
-    "cover": 2
+    "title": "6 Harry Potter and the Half-Blood Prince Book",
+    "cover": 1
   },
   {
     "path": "Pdf/Keeping_13.pdf",
-    "title": "Keeping 13:",
-    "cover": 2
+    "title": "Keeping 13",
+    "cover": 1
   },
   {
     "path": "Pdf/The City of Ember.pdf",
-    "title": "The City of Ember: The First Book of Ember",
-    "cover": 2
+    "title": "The City of Ember",
+    "cover": 1
   },
   {
     "path": "Pdf/The Diamond of Darkhold.pdf",
-    "title": "The Diamond of Darkhold (Book of Ember 4)",
-    "cover": 2
+    "title": "The Diamond of Darkhold",
+    "cover": 1
   },
   {
     "path": "Pdf/The People of Sparks.pdf",
-    "title": "The People of Sparks (City Of Ember Book 2)",
-    "cover": 2
+    "title": "The People of Sparks",
+    "cover": 1
   },
   {
     "path": "Pdf/The Prophet of Yonwood .pdf",
-    "title": "The Prophet of Yonwood (Book of Ember 3)",
-    "cover": 2
+    "title": "The Prophet of Yonwood",
+    "cover": 1
   }
 ]
