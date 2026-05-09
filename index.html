@@ -3,31 +3,22 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
 <title>My Kindle</title>
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
 <link href="https://fonts.googleapis.com/css2?family=Happy+Monkey&display=swap" rel="stylesheet">
 
-<script
-src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs"
-type="module">
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
 
 <style>
-
 :root{
   --bg:#f5f0e8;
   --text:#1a1612;
-  --muted:#7f7568;
-  --accent:#b5401a;
   --blue:#3b82f6;
   --blue-bg:#dbeafe;
-  --shadow:rgba(0,0,0,.16);
-  --ease:cubic-bezier(.16,1,.3,1);
+  --accent:#b5401a;
+  --shadow:rgba(0,0,0,.18);
   --font:'Happy Monkey', cursive;
+  --ease:cubic-bezier(.16,1,.3,1);
 }
 
 *{
@@ -36,46 +27,35 @@ type="module">
   box-sizing:border-box;
 }
 
-html,
-body{
+html,body{
   width:100%;
   height:100%;
   overflow:hidden;
   background:var(--bg);
-  color:var(--text);
   font-family:var(--font);
-  user-select:none;
+  color:var(--text);
 }
 
-/* =====================================
-   LIBRARY
-===================================== */
+/* ================= LIBRARY ================= */
 
 #library{
   width:100%;
   height:100%;
-  position:relative;
   display:flex;
   align-items:center;
   justify-content:center;
-  overflow:hidden;
+  position:relative;
 }
 
-#library-title{
+#title{
   position:absolute;
-  top:28px;
-  left:0;
-  right:0;
-
+  top:25px;
+  left:50%;
+  transform:translateX(-50%);
+  max-width:90vw;
   text-align:center;
-  font-size:1.15rem;
-  z-index:20;
-
-  padding:0 80px;
-
   white-space:nowrap;
   overflow:hidden;
-  text-overflow:ellipsis;
 }
 
 .carousel{
@@ -84,46 +64,24 @@ body{
   display:flex;
   align-items:center;
   justify-content:center;
-  overflow:hidden;
   cursor:grab;
-}
-
-.carousel.grabbing{
-  cursor:grabbing;
 }
 
 .track{
   display:flex;
-  align-items:center;
   gap:28px;
-
   padding:0 100px;
-
-  transition:transform .55s var(--ease);
-
-  will-change:transform;
+  transition:transform .5s var(--ease);
 }
 
-/* =====================================
-   BOOK
-===================================== */
-
 .book{
-  flex-shrink:0;
-
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:12px;
-
   opacity:.4;
-  transform:scale(.82);
-
-  transition:
-    transform .5s var(--ease),
-    opacity .45s ease;
-
+  transform:scale(.85);
   cursor:pointer;
+  transition:.4s;
 }
 
 .book.active{
@@ -132,963 +90,317 @@ body{
 }
 
 .cover{
-  width:140px;
-  height:200px;
-
-  position:relative;
-
-  border-radius:3px 8px 8px 3px;
-  overflow:hidden;
-
+  width:150px;
+  height:220px;
   background:#ddd;
-
-  box-shadow:
-    -5px 0 0 var(--accent),
-    0 12px 28px var(--shadow);
-
-  transition:
-    width .45s var(--ease),
-    height .45s var(--ease),
-    transform .45s var(--ease);
+  border-radius:5px;
+  overflow:hidden;
+  box-shadow:-5px 0 0 var(--accent), 0 10px 25px var(--shadow);
+  transition:width .4s, height .4s;
 }
 
 .book.active .cover{
-  width:190px;
-  height:270px;
+  width:200px;
+  height:280px;
 }
 
-.cover::after{
-  content:'';
-
-  position:absolute;
-  top:4px;
-  bottom:4px;
-  right:-3px;
-
-  width:5px;
-
-  border-radius:0 3px 3px 0;
-
-  background:
-  repeating-linear-gradient(
-    to bottom,
-    #fff 0px,
-    #fff 2px,
-    #ececec 2px,
-    #ececec 4px
-  );
-}
-
-.cover canvas{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-}
-
-.shimmer{
-  position:absolute;
-  inset:0;
-
-  background:
-  linear-gradient(
-    90deg,
-    #ddd 20%,
-    #eee 50%,
-    #ddd 80%
-  );
-
-  background-size:200% 100%;
-
-  animation:shimmer 1.3s linear infinite;
-}
-
-@keyframes shimmer{
-  to{
-    background-position:-200% 0;
-  }
-}
-
-/* =====================================
-   PROGRESS
-===================================== */
-
-.progress{
-  width:100%;
-  height:4px;
-
-  border-radius:999px;
-  overflow:hidden;
-
-  background:var(--blue-bg);
-
-  opacity:0;
-
-  transition:opacity .3s ease;
-}
-
-.book.active .progress{
-  opacity:1;
-}
-
-.progress-fill{
-  width:0%;
-  height:100%;
-  background:var(--blue);
-
-  transition:width .35s ease;
-}
-
-/* =====================================
-   READER
-===================================== */
+/* ================= READER ================= */
 
 #reader{
   position:fixed;
   inset:0;
-
-  background:var(--bg);
-
   display:none;
   flex-direction:column;
-
-  opacity:0;
-  transform:scale(1.03);
-
-  transition:
-    opacity .45s ease,
-    transform .45s var(--ease);
-
-  z-index:100;
+  background:var(--bg);
 }
 
 #reader.active{
   display:flex;
 }
 
-#reader.show{
-  opacity:1;
-  transform:scale(1);
-}
+/* TOP BAR */
 
-/* =====================================
-   TOP BAR
-===================================== */
-
-.reader-top{
+.topbar{
   position:absolute;
-
   top:0;
   left:0;
   right:0;
-
-  z-index:20;
-
-  padding:18px 24px;
-
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-
-  pointer-events:none;
+  padding:16px 20px;
+  z-index:10;
 }
 
-.reader-row{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-}
-
-.reader-title{
-  color:var(--muted);
-
-  font-size:.9rem;
-
-  max-width:70%;
-
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.page-info{
-  color:var(--muted);
-  font-size:.8rem;
-}
-
-.reader-progress{
+.progress{
   width:100%;
   height:4px;
-
+  background:var(--blue-bg);
   border-radius:999px;
   overflow:hidden;
-
-  background:rgba(0,0,0,.08);
 }
 
-.reader-progress-fill{
+.progress-fill{
   width:0%;
   height:100%;
-
   background:var(--blue);
-
-  transition:width .35s ease;
+  transition:width .3s ease;
 }
 
-/* =====================================
-   CANVAS
-===================================== */
+/* TITLE (AUTO SHRINK) */
+
+.reader-title{
+  font-size:1rem;
+  text-align:center;
+  white-space:nowrap;
+  overflow:hidden;
+  width:100%;
+  margin-bottom:10px;
+}
+
+/* PAGE AREA */
 
 .page-wrap{
   flex:1;
-
   display:flex;
   align-items:center;
   justify-content:center;
-
-  overflow:hidden;
-
-  animation:fadeIn .45s ease;
+  position:relative;
 }
 
-#pdf-canvas{
-  display:block;
-
+#pdf{
   max-width:100%;
   max-height:100%;
 }
 
-@keyframes fadeIn{
-  from{
-    opacity:0;
-    transform:translateY(10px);
-  }
-  to{
-    opacity:1;
-    transform:translateY(0);
-  }
+/* ================= PAGE FLIP ================= */
+
+.flip{
+  position:absolute;
+  inset:0;
+  background:var(--bg);
+  transform-origin:left;
+  opacity:0;
+  pointer-events:none;
 }
 
-/* =====================================
-   NAVIGATION ZONES
-===================================== */
+.flip.active{
+  animation:flip 1.5s var(--ease);
+}
+
+@keyframes flip{
+  0%{transform:rotateY(0deg);opacity:0;}
+  20%{opacity:1;}
+  50%{transform:rotateY(-90deg);}
+  100%{transform:rotateY(-180deg);opacity:0;}
+}
+
+/* NAV */
 
 .nav{
   position:fixed;
   top:0;
   bottom:0;
-
   width:40%;
-
-  z-index:10;
 }
 
-#nav-left{
-  left:0;
-}
-
-#nav-right{
-  right:0;
-}
-
-/* =====================================
-   BACK BUTTON
-===================================== */
-
-#back-btn{
-  position:absolute;
-
-  top:16px;
-  left:20px;
-
-  z-index:30;
-
-  background:none;
-  border:none;
-
-  color:var(--muted);
-
-  font-family:inherit;
-  font-size:.85rem;
-
-  cursor:pointer;
-}
-
-/* =====================================
-   MOBILE
-===================================== */
-
-@media(max-width:700px){
-
-  .track{
-    padding:0 60px;
-    gap:18px;
-  }
-
-  .cover{
-    width:115px;
-    height:170px;
-  }
-
-  .book.active .cover{
-    width:155px;
-    height:225px;
-  }
-
-}
+#left{left:0;}
+#right{right:0;}
 
 </style>
 </head>
+
 <body>
 
-<!-- =====================================
-     LIBRARY
-===================================== -->
-
 <div id="library">
+  <div id="title"></div>
 
-  <div id="library-title">
-    Loading...
-  </div>
-
-  <div class="carousel" id="carousel">
+  <div class="carousel">
     <div class="track" id="track"></div>
   </div>
-
 </div>
-
-<!-- =====================================
-     READER
-===================================== -->
 
 <div id="reader">
 
-  <button id="back-btn">
-    ← Library
-  </button>
+  <div class="topbar">
 
-  <div class="reader-top">
+    <div class="reader-title" id="reader-title"></div>
 
-    <div class="reader-row">
-
-      <div class="reader-title" id="reader-title">
-        Book
-      </div>
-
-      <div class="page-info" id="page-info">
-        1 / 1
-      </div>
-
-    </div>
-
-    <div class="reader-progress">
-      <div
-      class="reader-progress-fill"
-      id="reader-progress-fill">
-      </div>
+    <div class="progress">
+      <div class="progress-fill" id="fill"></div>
     </div>
 
   </div>
 
-  <div id="nav-left" class="nav"></div>
-  <div id="nav-right" class="nav"></div>
+  <div id="left" class="nav"></div>
+  <div id="right" class="nav"></div>
 
   <div class="page-wrap">
-    <canvas id="pdf-canvas"></canvas>
+    <div class="flip" id="flip"></div>
+    <canvas id="pdf"></canvas>
   </div>
 
 </div>
 
 <script type="module">
 
-async function getPdfjsLib(){
-
+async function getPdfjs(){
   for(let i=0;i<60;i++){
-
-    if(window.pdfjsLib){
-      return window.pdfjsLib;
-    }
-
+    if(window.pdfjsLib) return window.pdfjsLib;
     await new Promise(r=>setTimeout(r,50));
   }
-
-  throw new Error('PDF.js failed to load');
 }
 
-/* =====================================
-   DOM
-===================================== */
+const track=document.getElementById('track');
+const title=document.getElementById('title');
 
-const track =
-document.getElementById('track');
+const reader=document.getElementById('reader');
+const readerTitle=document.getElementById('reader-title');
 
-const carousel =
-document.getElementById('carousel');
+const canvas=document.getElementById('pdf');
+const fill=document.getElementById('fill');
+const flip=document.getElementById('flip');
 
-const libraryTitle =
-document.getElementById('library-title');
+const left=document.getElementById('left');
+const right=document.getElementById('right');
 
-const reader =
-document.getElementById('reader');
+let books=[];
+let currentDoc;
+let page=1;
+let currentBook;
+let focused=0;
 
-const canvas =
-document.getElementById('pdf-canvas');
+/* ================= LOAD ================= */
 
-const pageInfo =
-document.getElementById('page-info');
+async function load(){
 
-const readerTitle =
-document.getElementById('reader-title');
+  const res=await fetch('./pdf-list.json');
+  books=await res.json();
 
-const readerProgressFill =
-document.getElementById('reader-progress-fill');
+  const pdfjs=await getPdfjs();
 
-const backBtn =
-document.getElementById('back-btn');
-
-const navLeft =
-document.getElementById('nav-left');
-
-const navRight =
-document.getElementById('nav-right');
-
-/* =====================================
-   STATE
-===================================== */
-
-let books = [];
-
-let focused = 0;
-
-let currentDoc = null;
-let currentPage = 1;
-let currentBook = null;
-
-/* =====================================
-   LOAD LIBRARY
-===================================== */
-
-async function loadLibrary(){
-
-  let raw = [];
-
-  try{
-
-    const res =
-    await fetch('./pdf-list.json?t=' + Date.now());
-
-    raw = await res.json();
-
-  }catch(err){
-
-    libraryTitle.textContent =
-    'Could not load pdf-list.json';
-
-    return;
-  }
-
-  books = raw.map(item=>{
-
-    if(typeof item === 'string'){
-
-      return{
-        path:item,
-        title:cleanName(item)
-      };
-    }
-
-    return{
-      path:item.path,
-      title:item.title || cleanName(item.path)
-    };
-  });
-
-  const pdfjsLib =
-  await getPdfjsLib();
-
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
+  pdfjs.GlobalWorkerOptions.workerSrc=
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
 
-  for(let i=0;i<books.length;i++){
+  books.forEach((b,i)=>{
 
-    const book = books[i];
+    const el=document.createElement('div');
+    el.className='book';
+    el.dataset.i=i;
 
-    const el =
-    document.createElement('div');
-
-    el.className = 'book';
-
-    el.dataset.index = i;
-
-    el.innerHTML = `
-      <div class="cover" id="cover-${i}">
-        <div class="shimmer"></div>
-      </div>
-
-      <div class="progress">
-        <div
-        class="progress-fill"
-        id="fill-${i}">
-        </div>
-      </div>
+    el.innerHTML=`
+      <div class="cover"></div>
     `;
 
     track.appendChild(el);
-
-    renderThumbnail(pdfjsLib, i);
-  }
-
-  updateCarousel();
-
-  track.addEventListener('click', e=>{
-
-    const book =
-    e.target.closest('.book');
-
-    if(!book) return;
-
-    const i =
-    Number(book.dataset.index);
-
-    if(i === focused){
-
-      openBook(i);
-
-    }else{
-
-      focused = i;
-
-      updateCarousel();
-    }
   });
 
-  setupDragging();
+  track.onclick=(e)=>{
+
+    const b=e.target.closest('.book');
+    if(!b) return;
+
+    const i=+b.dataset.i;
+
+    if(i===focused) open(i);
+    else{
+      focused=i;
+      update();
+    }
+  };
+
+  update();
 }
 
-/* =====================================
-   UPDATE CAROUSEL
-===================================== */
+/* ================= UPDATE ================= */
 
-function updateCarousel(){
+function update(){
 
-  const all =
-  [...document.querySelectorAll('.book')];
-
-  all.forEach((book,i)=>{
-
-    book.classList.toggle(
-      'active',
-      i === focused
-    );
+  [...document.querySelectorAll('.book')]
+  .forEach((b,i)=>{
+    b.classList.toggle('active',i===focused);
   });
 
-  if(books[focused]){
-
-    libraryTitle.textContent =
-    books[focused].title;
-  }
-
-  const active =
-  all[focused];
-
-  if(active){
-
-    const offset =
-      active.offsetLeft
-      - (window.innerWidth / 2)
-      + (active.clientWidth / 2);
-
-    track.style.transform =
-    `translateX(${-offset}px)`;
-  }
+  title.textContent=books[focused]?.title||'';
+  fitText(title, 24);
 }
 
-/* =====================================
-   DRAGGING
-===================================== */
+/* ================= OPEN ================= */
 
-function setupDragging(){
+async function open(i){
 
-  let startX = 0;
-  let startFocus = 0;
-  let dragging = false;
+  const pdfjs=await getPdfjs();
 
-  const STEP = 180;
+  currentBook=books[i];
 
-  function begin(x){
+  currentDoc=
+  await pdfjs.getDocument('./'+currentBook.path).promise;
 
-    startX = x;
-    startFocus = focused;
-    dragging = true;
-
-    carousel.classList.add('grabbing');
-  }
-
-  function move(x){
-
-    if(!dragging) return;
-
-    const dx = x - startX;
-
-    const steps =
-    -Math.round(dx / STEP);
-
-    const next =
-    Math.max(
-      0,
-      Math.min(
-        books.length - 1,
-        startFocus + steps
-      )
-    );
-
-    if(next !== focused){
-
-      focused = next;
-
-      updateCarousel();
-    }
-  }
-
-  function end(){
-
-    dragging = false;
-
-    carousel.classList.remove('grabbing');
-  }
-
-  carousel.addEventListener(
-    'mousedown',
-    e=>begin(e.clientX)
-  );
-
-  window.addEventListener(
-    'mousemove',
-    e=>move(e.clientX)
-  );
-
-  window.addEventListener(
-    'mouseup',
-    end
-  );
-
-  carousel.addEventListener(
-    'touchstart',
-    e=>begin(e.touches[0].clientX),
-    {passive:true}
-  );
-
-  carousel.addEventListener(
-    'touchmove',
-    e=>move(e.touches[0].clientX),
-    {passive:true}
-  );
-
-  carousel.addEventListener(
-    'touchend',
-    end
-  );
-}
-
-/* =====================================
-   THUMBNAILS
-===================================== */
-
-async function renderThumbnail(pdfjsLib, i){
-
-  const book = books[i];
-
-  try{
-
-    const doc =
-    await pdfjsLib
-    .getDocument('./' + book.path)
-    .promise;
-
-    const savedPage =
-    Number(
-      localStorage.getItem(
-        'page::' + book.path
-      )
-    ) || 1;
-
-    const percent =
-    ((savedPage - 1) / (doc.numPages - 1)) * 100;
-
-    const fill =
-    document.getElementById('fill-' + i);
-
-    if(fill){
-      fill.style.width =
-      percent + '%';
-    }
-
-    const page =
-    await doc.getPage(1);
-
-    const viewport =
-    page.getViewport({scale:1});
-
-    const scale = 0.42;
-
-    const vp =
-    page.getViewport({scale});
-
-    const c =
-    document.createElement('canvas');
-
-    c.width = vp.width;
-    c.height = vp.height;
-
-    await page.render({
-      canvasContext:c.getContext('2d'),
-      viewport:vp
-    }).promise;
-
-    const cover =
-    document.getElementById('cover-' + i);
-
-    cover.innerHTML = '';
-
-    cover.appendChild(c);
-
-  }catch(err){
-
-    console.error(err);
-  }
-}
-
-/* =====================================
-   OPEN BOOK
-===================================== */
-
-async function openBook(i){
-
-  const book = books[i];
-
-  if(!book) return;
-
-  const pdfjsLib =
-  await getPdfjsLib();
-
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
-
-  currentBook = book;
-
-  currentDoc =
-  await pdfjsLib
-  .getDocument('./' + book.path)
-  .promise;
-
-  /* AUTO SAVE READING POSITION */
-
-  currentPage =
-  Number(
-    localStorage.getItem(
-      'page::' + book.path
-    )
-  ) || 1;
-
-  currentPage =
-  Math.max(
-    1,
-    Math.min(
-      currentPage,
-      currentDoc.numPages
-    )
-  );
-
-  readerTitle.textContent =
-  book.title;
+  page=Number(localStorage.getItem(currentBook.path))||1;
 
   reader.classList.add('active');
 
-  requestAnimationFrame(()=>{
+  readerTitle.textContent=currentBook.title;
+  fitText(readerTitle, 18);
 
-    reader.classList.add('show');
-
-    renderPage(currentPage);
-  });
+  render(page);
 }
 
-/* =====================================
-   RENDER PAGE
-===================================== */
+/* ================= RENDER ================= */
 
-async function renderPage(num){
+async function render(n){
 
-  const page =
-  await currentDoc.getPage(num);
+  triggerFlip();
 
-  const base =
-  page.getViewport({scale:1});
+  const p=await currentDoc.getPage(n);
 
-  const scale =
-  Math.min(
-    window.innerWidth / base.width,
-    window.innerHeight / base.height
-  );
+  const vp=p.getViewport({scale:1.5});
 
-  const vp =
-  page.getViewport({scale});
+  canvas.width=vp.width;
+  canvas.height=vp.height;
 
-  canvas.width = vp.width;
-  canvas.height = vp.height;
-
-  await page.render({
-    canvasContext:
-    canvas.getContext('2d'),
+  await p.render({
+    canvasContext:canvas.getContext('2d'),
     viewport:vp
   }).promise;
 
-  currentPage = num;
+  page=n;
 
-  /* SAVE PAGE */
+  localStorage.setItem(currentBook.path,page);
 
-  localStorage.setItem(
-    'page::' + currentBook.path,
-    num
-  );
+  const percent=
+  ((page-1)/(currentDoc.numPages-1))*100;
 
-  /* PAGE TEXT */
+  fill.style.width=percent+'%';
+}
 
-  pageInfo.textContent =
-  `${num} / ${currentDoc.numPages}`;
+/* ================= FLIP ================= */
 
-  /* TOP BAR PROGRESS */
+function triggerFlip(){
+  flip.classList.remove('active');
+  void flip.offsetWidth;
+  flip.classList.add('active');
+}
 
-  const percent =
-  ((num - 1) / (currentDoc.numPages - 1)) * 100;
+/* ================= NAV ================= */
 
-  readerProgressFill.style.width =
-  percent + '%';
+left.onclick=()=>page>1&&render(page-1);
+right.onclick=()=>page<currentDoc.numPages&&render(page+1);
 
-  /* LIBRARY PROGRESS */
+/* ================= AUTO FIT TEXT ================= */
 
-  const idx =
-  books.findIndex(
-    b=>b.path === currentBook.path
-  );
+function fitText(el, max){
 
-  const fill =
-  document.getElementById('fill-' + idx);
+  let size=max;
 
-  if(fill){
+  el.style.fontSize=size+'px';
 
-    fill.style.width =
-    percent + '%';
+  while(el.scrollWidth>el.clientWidth && size>10){
+    size--;
+    el.style.fontSize=size+'px';
   }
 }
 
-/* =====================================
-   NAVIGATION
-===================================== */
+/* ================= START ================= */
 
-navLeft.addEventListener('click',()=>{
-
-  if(currentPage > 1){
-
-    renderPage(currentPage - 1);
-  }
-});
-
-navRight.addEventListener('click',()=>{
-
-  if(currentDoc &&
-     currentPage < currentDoc.numPages){
-
-    renderPage(currentPage + 1);
-  }
-});
-
-/* =====================================
-   CLOSE READER
-===================================== */
-
-backBtn.addEventListener('click',()=>{
-
-  reader.classList.remove('show');
-
-  setTimeout(()=>{
-
-    reader.classList.remove('active');
-
-  },300);
-});
-
-/* =====================================
-   KEYBOARD
-===================================== */
-
-window.addEventListener('keydown', e=>{
-
-  if(reader.classList.contains('active')){
-
-    if(e.key === 'ArrowRight'){
-
-      navRight.click();
-    }
-
-    if(e.key === 'ArrowLeft'){
-
-      navLeft.click();
-    }
-
-    if(e.key === 'Escape'){
-
-      backBtn.click();
-    }
-
-  }else{
-
-    if(e.key === 'ArrowRight'){
-
-      focused =
-      Math.min(
-        books.length - 1,
-        focused + 1
-      );
-
-      updateCarousel();
-    }
-
-    if(e.key === 'ArrowLeft'){
-
-      focused =
-      Math.max(
-        0,
-        focused - 1
-      );
-
-      updateCarousel();
-    }
-
-    if(e.key === 'Enter'){
-
-      openBook(focused);
-    }
-  }
-});
-
-/* =====================================
-   HELPERS
-===================================== */
-
-function cleanName(path){
-
-  return path
-    .split('/')
-    .pop()
-    .replace('.pdf','')
-    .replace(/[_-]/g,' ');
-}
-
-/* =====================================
-   START
-===================================== */
-
-loadLibrary();
+load();
 
 </script>
 
