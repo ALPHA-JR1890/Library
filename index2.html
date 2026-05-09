@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>My Kindle</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Happy+Monkey&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
+
+<style>
+
+:root{
+  --bg:#f5f0e8;
+  --text:#1a1612;
+  --muted:#7f7568;
+  --blue:#3b82f6;
+  --blue-bg:#dbeafe;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --font:'Happy Monkey', cursive;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+html,body{
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:var(--bg);
+  font-family:var(--font);
+}
+
+/* ================= LIBRARY ================= */
+
+#library{
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+}
+
+.carousel{
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:grab;
+}
+
+.track{
+  display:flex;
+  gap:28px;
+  padding:0 100px;
+  transition:transform .5s var(--ease);
+}
+
+/* ================= BOOK ================= */
+
+.book{
+  opacity:.4;
+  transform:scale(.85);
+  transition:.4s;
+  cursor:pointer;
+}
+
+.book.active{
+  opacity:1;
+  transform:scale(1);
+}
+
+.cover{
+  width:140px;
+  height:200px;
+  background:#ddd;
+  border-radius:6px;
+  overflow:hidden;
+}
+
+/* ================= READER ================= */
+
+#reader{
+  position:fixed;
+  inset:0;
+  display:none;
+  flex-direction:column;
+  background:var(--bg);
+}
+
+#reader.active{
+  display:flex;
+}
+
+/* TOP BAR (FIXED LAYOUT) */
+.reader-top{
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  padding:16px 20px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+/* BACK BUTTON ROW */
+.top-row{
+  display:flex;
+  justify-content:flex-start;
+}
+
+/* PAGE ROW */
+.page-row{
+  display:flex;
+  justify-content:center;
+}
+
+/* BACK BUTTON */
+#back-btn{
+  background:none;
+  border:none;
+  font-size:.9rem;
+  color:var(--muted);
+  cursor:pointer;
+}
+
+/* PAGE TEXT */
+.page-info{
+  font-size:.85rem;
+  color:var(--muted);
+}
+
+/* PROGRESS */
+.reader-progress{
+  width:100%;
+  height:4px;
+  background:#ddd;
+  border-radius:999px;
+  overflow:hidden;
+}
+
+.reader-progress-fill{
+  width:0%;
+  height:100%;
+  background:var(--blue);
+}
+
+/* CANVAS */
+.page-wrap{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+canvas{
+  max-width:100%;
+  max-height:100%;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- LIBRARY -->
+<div id="library">
+  <div class="carousel">
+    <div class="track" id="track"></div>
+  </div>
+</div>
+
+<!-- READER -->
+<div id="reader">
+
+  <div class="reader-top">
+
+    <div class="top-row">
+      <button id="back-btn">← Library</button>
+    </div>
+
+    <div class="page-row">
+      <div class="page-info" id="page-info">1 / 1</div>
+    </div>
+
+    <div class="reader-progress">
+      <div class="reader-progress-fill" id="reader-progress-fill"></div>
+    </div>
+
+  </div>
+
+  <div class="page-wrap">
+    <canvas id="pdf-canvas"></canvas>
+  </div>
+
+</div>
+
+<script type="module">
+
+const track = document.getElementById("track");
+const reader = document.getElementById("reader");
+const canvas = document.getElementById("pdf-canvas");
+const pageInfo = document.getElementById("page-info");
+const backBtn = document.getElementById("back-btn");
+const progress = document.getElementById("reader-progress-fill");
+
+let books = [];
+let currentDoc;
+let currentPage = 1;
+let currentBook;
+
+async function loadLibrary(){
+
+  const res = await fetch("./pdf-list.json");
+  const raw = await res.json();
+
+  books = raw.map(b => typeof b === "string"
+    ? {path:b,title:b}
+    : b
+  );
+
+  books.forEach((b,i)=>{
+
+    const el = document.createElement("div");
+    el.className="book";
+    el.innerHTML = `<div class="cover"></div>`;
+    el.onclick = ()=>openBook(i);
+
+    track.appendChild(el);
+  });
+
+}
+
+async function openBook(i){
+
+  const pdfjsLib = window.pdfjsLib;
+
+  currentBook = books[i];
+
+  currentDoc = await pdfjsLib.getDocument("./"+currentBook.path).promise;
+
+  currentPage = 1;
+
+  reader.classList.add("active");
+
+  renderPage(currentPage);
+}
+
+async function renderPage(n){
+
+  const page = await currentDoc.getPage(n);
+  const vp = page.getViewport({scale:1.2});
+
+  canvas.width = vp.width;
+  canvas.height = vp.height;
+
+  await page.render({
+    canvasContext:canvas.getContext("2d"),
+    viewport:vp
+  }).promise;
+
+  currentPage = n;
+
+  pageInfo.textContent = `${n} / ${currentDoc.numPages}`;
+
+  progress.style.width =
+  ((n-1)/(currentDoc.numPages-1))*100 + "%";
+}
+
+backBtn.onclick = ()=>{
+  reader.classList.remove("active");
+};
+
+loadLibrary();
+
+</script>
+
+</body>
+</html>
