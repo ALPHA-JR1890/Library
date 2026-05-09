@@ -58,8 +58,6 @@ html,body{
   pointer-events:none;
 }
 
-/* ===== SETTINGS BUTTON ===== */
-
 #settings-btn{
   position:absolute;
   top:18px; right:20px;
@@ -75,8 +73,6 @@ html,body{
   transition:background .2s, color .2s;
 }
 #settings-btn:hover{ background:rgba(0,0,0,.07); color:var(--text); }
-
-/* ===== SETTINGS PANEL ===== */
 
 #settings-panel{
   position:absolute;
@@ -149,9 +145,6 @@ html,body{
   border-color:var(--accent);
 }
 
-
-/* ===== CAROUSEL VIEW ===== */
-
 .carousel{
   width:100%; height:100%;
   display:flex;
@@ -170,8 +163,6 @@ html,body{
   transition:transform .55s var(--ease);
   will-change:transform;
 }
-
-/* ===== GRID VIEW ===== */
 
 #grid-view{
   display:none;
@@ -247,8 +238,6 @@ html,body{
   transition:width .35s ease;
 }
 
-/* ===== BOOK (carousel) ===== */
-
 .book{
   flex-shrink:0;
   display:flex;
@@ -299,8 +288,6 @@ html,body{
 }
 .book.active .progress{ opacity:1; }
 .progress-fill{ width:0%; height:100%; background:var(--blue); transition:width .35s ease; }
-
-/* ===== READER ===== */
 
 #reader{
   position:fixed; inset:0;
@@ -353,7 +340,6 @@ html,body{
 <body>
 
 <div id="library">
-
   <div id="library-title">Loading...</div>
 
   <button id="settings-btn" title="Settings" aria-label="Settings">
@@ -361,7 +347,6 @@ html,body{
   </button>
 
   <div id="settings-panel">
-
     <div>
       <div class="settings-section-label">Display</div>
       <div class="settings-row">
@@ -384,8 +369,6 @@ html,body{
         <button class="sort-btn" id="sort-recent">Recent</button>
       </div>
     </div>
-
-
   </div>
 
   <div class="carousel" id="carousel">
@@ -395,7 +378,6 @@ html,body{
   <div id="grid-view">
     <div class="grid-inner" id="grid-inner"></div>
   </div>
-
 </div>
 
 <div id="reader">
@@ -426,7 +408,6 @@ async function getPdfjsLib(){
   throw new Error('PDF.js failed to load');
 }
 
-/* ===== DOM ===== */
 const track = document.getElementById('track');
 const carousel = document.getElementById('carousel');
 const libraryTitle = document.getElementById('library-title');
@@ -443,19 +424,16 @@ const settingsPanel = document.getElementById('settings-panel');
 const gridView = document.getElementById('grid-view');
 const gridInner = document.getElementById('grid-inner');
 
-/* ===== STATE ===== */
 let books = [];
 let focused = 0;
 let currentDoc = null;
 let currentPage = 1;
 let currentBook = null;
-const thumbnailCache = {}; // index -> canvas element
+const thumbnailCache = {};
 
-// persist view/sort
 let viewMode = localStorage.getItem('kindle::viewMode') || 'carousel';
 let sortMode = localStorage.getItem('kindle::sortMode') || 'title';
 
-/* ===== SETTINGS PANEL TOGGLE ===== */
 settingsBtn.addEventListener('click', e=>{
   e.stopPropagation();
   settingsPanel.classList.toggle('open');
@@ -466,7 +444,6 @@ document.addEventListener('click', e=>{
   }
 });
 
-/* ===== VIEW TOGGLE ===== */
 function applyViewMode(mode){
   viewMode = mode;
   localStorage.setItem('kindle::viewMode', mode);
@@ -487,7 +464,6 @@ function applyViewMode(mode){
 document.getElementById('view-carousel').addEventListener('click', ()=>applyViewMode('carousel'));
 document.getElementById('view-grid').addEventListener('click', ()=>applyViewMode('grid'));
 
-/* ===== SORT ===== */
 function applySortMode(mode){
   sortMode = mode;
   localStorage.setItem('kindle::sortMode', mode);
@@ -528,8 +504,6 @@ function getProgress(path){
   return (page - 1) / (total - 1);
 }
 
-
-/* ===== LOAD LIBRARY ===== */
 async function loadLibrary(){
   let raw = [];
   try{
@@ -541,19 +515,16 @@ async function loadLibrary(){
   }
 
   books = raw.map(item=>{
-    if(typeof item === 'string') return{ path:item, title:cleanName(item) };
-    return{ 
-      path:item.path, 
-      title:item.title || cleanName(item.path), 
-      coverImage:item.coverImage || null
-    };
+    if(typeof item === 'string'){
+      return{ path:item, title:cleanName(item) };
+    }
+    return{ path:item.path, title:item.title || cleanName(item.path) };
   });
 
   const pdfjsLib = await getPdfjsLib();
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
 
-  // Build carousel items
   for(let i=0;i<books.length;i++){
     const el = document.createElement('div');
     el.className = 'book';
@@ -566,11 +537,9 @@ async function loadLibrary(){
     renderThumbnail(pdfjsLib, i);
   }
 
-  // Apply persisted sort button state
   document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('sort-'+sortMode).classList.add('active');
 
-  // Apply persisted view mode (after books & thumbnails are kicked off)
   applyViewMode(viewMode);
 
   if(!track._clickBound){
@@ -586,7 +555,6 @@ async function loadLibrary(){
   }
 }
 
-/* ===== REBUILD CAROUSEL (after sort) ===== */
 function rebuildCarousel(){
   const sorted = getSortedIndices();
   track.innerHTML = '';
@@ -596,7 +564,6 @@ function rebuildCarousel(){
     el.dataset.index = i;
     const cover = document.getElementById('cover-'+i);
     const fill = document.getElementById('fill-'+i);
-    // clone existing cover
     const coverClone = cover ? cover.cloneNode(true) : document.createElement('div');
     coverClone.id = 'cover-'+i;
     el.appendChild(coverClone);
@@ -613,7 +580,6 @@ function rebuildCarousel(){
   focused = 0;
 }
 
-/* ===== RENDER GRID ===== */
 function renderGrid(){
   gridInner.innerHTML = '';
   const sorted = getSortedIndices();
@@ -631,7 +597,6 @@ function renderGrid(){
       coverEl.appendChild(thumbnailCache[i].cloneNode(true));
     } else {
       coverEl.innerHTML = '<div class="shimmer"></div>';
-      // will be filled in by renderThumbnail when it completes
     }
 
     const percent = getProgress(book.path) * 100;
@@ -652,7 +617,6 @@ function renderGrid(){
   });
 }
 
-/* ===== UPDATE CAROUSEL ===== */
 function updateCarousel(){
   const all = [...document.querySelectorAll('.book')];
   all.forEach((book,i)=>book.classList.toggle('active', i === focused));
@@ -667,7 +631,6 @@ function updateCarousel(){
   }
 }
 
-/* ===== DRAGGING ===== */
 function setupDragging(){
   let startX=0, startFocus=0, dragging=false;
   const STEP=180;
@@ -688,142 +651,126 @@ function setupDragging(){
   carousel.addEventListener('touchend',end);
 }
 
-/* ===== THUMBNAILS ===== */
-async function renderThumbnail(pdfjsLib,i){
-  const book=books[i];
+async function renderThumbnail(pdfjsLib, i){
+  const book = books[i];
   try{
-    // If there's a custom cover image, use that instead of rendering from PDF
-    if(book.coverImage){
-      const img = new Image();
-      img.onload = ()=>{
-        const c = document.createElement('canvas');
-        c.width = 140;
-        c.height = 200;
-        const ctx = c.getContext('2d');
-        ctx.drawImage(img, 0, 0, 140, 200);
-        thumbnailCache[i] = c;
-        const cover = document.getElementById('cover-'+i);
-        if(cover){ cover.innerHTML=''; cover.appendChild(c.cloneNode(true)); }
-        const gridCover = document.getElementById('grid-cover-'+i);
-        if(gridCover){ gridCover.innerHTML=''; gridCover.appendChild(c.cloneNode(true)); }
-      };
-      img.onerror = ()=>{
-        console.warn('Could not load cover image:', book.coverImage);
-        renderPdfThumbnail(pdfjsLib, i, book);
-      };
-      img.src = book.coverImage;
-      return;
-    }
+    const doc = await pdfjsLib.getDocument('./' + book.path).promise;
 
-    renderPdfThumbnail(pdfjsLib, i, book);
-  }catch(err){ console.error('Failed to load', book.title, err.message); }
-}
+    const savedPage = Number(localStorage.getItem('page::' + book.path)) || 1;
+    const percent = ((savedPage - 1) / (doc.numPages - 1)) * 100;
 
-async function renderPdfThumbnail(pdfjsLib, i, book){
-  try{
-    const url = book.path.startsWith('http') ? book.path : './'+book.path;
-    const doc = await pdfjsLib.getDocument({
-      url,
-      stopAtErrors: false,
-      ignoreErrors: true,
-      disableAutoFetch: false
-    }).promise;
-    localStorage.setItem('total::'+book.path, doc.numPages);
-    const savedPage = Number(localStorage.getItem('page::'+book.path))||1;
-    const percent = doc.numPages > 1 ? ((savedPage-1)/(doc.numPages-1))*100 : 0;
-    const fill = document.getElementById('fill-'+i);
-    if(fill) fill.style.width=percent+'%';
+    const fill = document.getElementById('fill-' + i);
+    if(fill) fill.style.width = percent + '%';
+
+    localStorage.setItem('total::' + book.path, doc.numPages);
+
     const page = await doc.getPage(1);
-    const vp = page.getViewport({scale:0.42});
+    const vp = page.getViewport({scale: 0.42});
     const c = document.createElement('canvas');
-    c.width=vp.width; c.height=vp.height;
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = '#f5f0e8';
-    ctx.fillRect(0, 0, c.width, c.height);
-    
+    c.width = vp.width;
+    c.height = vp.height;
+
     try{
       await page.render({
-        canvasContext: ctx,
-        viewport: vp,
-        enableWebGL: false
+        canvasContext: c.getContext('2d'),
+        viewport: vp
       }).promise;
     }catch(renderErr){
-      console.warn('Render error for', book.title, renderErr.message);
+      console.warn('Partial render for', book.title, renderErr.message);
     }
 
     thumbnailCache[i] = c;
-    const cover = document.getElementById('cover-'+i);
-    if(cover){ cover.innerHTML=''; cover.appendChild(c.cloneNode(true)); }
-    const gridCover = document.getElementById('grid-cover-'+i);
-    if(gridCover){ gridCover.innerHTML=''; gridCover.appendChild(c.cloneNode(true)); }
+    const cover = document.getElementById('cover-' + i);
+    if(cover){ cover.innerHTML = ''; cover.appendChild(c.cloneNode(true)); }
 
-  }catch(err){ console.error('Failed to load', book.title, err.message); }
+    const gridCover = document.getElementById('grid-cover-' + i);
+    if(gridCover){ gridCover.innerHTML = ''; gridCover.appendChild(c.cloneNode(true)); }
+
+  }catch(err){
+    console.error(err);
+  }
 }
 
-/* ===== OPEN BOOK ===== */
 async function openBook(i){
-  const book=books[i];
+  const book = books[i];
   if(!book) return;
-  const pdfjsLib=await getPdfjsLib();
-  pdfjsLib.GlobalWorkerOptions.workerSrc=
+
+  const pdfjsLib = await getPdfjsLib();
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
-  currentBook=book;
-  const bookUrl = book.path.startsWith('http') ? book.path : './'+book.path;
-  currentDoc=await pdfjsLib.getDocument({ url: bookUrl, stopAtErrors: false, ignoreErrors: true }).promise;
-  localStorage.setItem('recent::'+book.path, Date.now());
-  currentPage=Number(localStorage.getItem('page::'+book.path))||1;
-  currentPage=Math.max(1,Math.min(currentPage,currentDoc.numPages));
-  readerTitle.textContent=book.title;
+
+  currentBook = book;
+  currentDoc = await pdfjsLib.getDocument('./' + book.path).promise;
+
+  currentPage = Number(localStorage.getItem('page::' + book.path)) || 1;
+  currentPage = Math.max(1, Math.min(currentPage, currentDoc.numPages));
+
+  readerTitle.textContent = book.title;
   reader.classList.add('active');
-  requestAnimationFrame(()=>{ reader.classList.add('show'); renderPage(currentPage); });
+
+  requestAnimationFrame(()=>{
+    reader.classList.add('show');
+    renderPage(currentPage);
+  });
 }
 
-/* ===== RENDER PAGE ===== */
 async function renderPage(num){
-  const page=await currentDoc.getPage(num);
-  const base=page.getViewport({scale:1});
-  const scale=Math.min(window.innerWidth/base.width,window.innerHeight/base.height);
-  const vp=page.getViewport({scale});
-  canvas.width=vp.width; canvas.height=vp.height;
+  const page = await currentDoc.getPage(num);
+  const base = page.getViewport({scale:1});
+  const scale = Math.min(window.innerWidth / base.width, window.innerHeight / base.height);
+  const vp = page.getViewport({scale});
+
+  canvas.width = vp.width;
+  canvas.height = vp.height;
+
   try{
-    await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
-  }catch(e){ console.warn('Partial page render:', e.message); }
-  currentPage=num;
-  localStorage.setItem('page::'+currentBook.path,num);
-  pageInfo.textContent=`${num} / ${currentDoc.numPages}`;
-  const percent=((num-1)/(currentDoc.numPages-1))*100;
-  readerProgressFill.style.width=percent+'%';
-  const idx=books.findIndex(b=>b.path===currentBook.path);
-  const fill=document.getElementById('fill-'+idx);
-  if(fill) fill.style.width=percent+'%';
+    await page.render({
+      canvasContext: canvas.getContext('2d'),
+      viewport: vp
+    }).promise;
+  }catch(e){
+    console.warn('Partial page render:', e.message);
+  }
+
+  currentPage = num;
+  localStorage.setItem('page::' + currentBook.path, num);
+  pageInfo.textContent = `${num} / ${currentDoc.numPages}`;
+
+  const percent = ((num - 1) / (currentDoc.numPages - 1)) * 100;
+  readerProgressFill.style.width = percent + '%';
+
+  const idx = books.findIndex(b=>b.path === currentBook.path);
+  const fill = document.getElementById('fill-' + idx);
+  if(fill) fill.style.width = percent + '%';
 }
 
-/* ===== NAVIGATION ===== */
-navLeft.addEventListener('click',()=>{ if(currentPage>1) renderPage(currentPage-1); });
-navRight.addEventListener('click',()=>{ if(currentDoc&&currentPage<currentDoc.numPages) renderPage(currentPage+1); });
+navLeft.addEventListener('click',()=>{
+  if(currentPage > 1) renderPage(currentPage - 1);
+});
 
-/* ===== CLOSE READER ===== */
+navRight.addEventListener('click',()=>{
+  if(currentDoc && currentPage < currentDoc.numPages) renderPage(currentPage + 1);
+});
+
 backBtn.addEventListener('click',()=>{
   reader.classList.remove('show');
   setTimeout(()=>reader.classList.remove('active'),300);
 });
 
-/* ===== KEYBOARD ===== */
-window.addEventListener('keydown',e=>{
+window.addEventListener('keydown', e=>{
   if(reader.classList.contains('active')){
-    if(e.key==='ArrowRight') navRight.click();
-    if(e.key==='ArrowLeft') navLeft.click();
-    if(e.key==='Escape') backBtn.click();
+    if(e.key === 'ArrowRight') navRight.click();
+    if(e.key === 'ArrowLeft') navLeft.click();
+    if(e.key === 'Escape') backBtn.click();
   } else {
-    if(viewMode==='carousel'){
-      if(e.key==='ArrowRight'){ focused=Math.min(books.length-1,focused+1); updateCarousel(); }
-      if(e.key==='ArrowLeft'){ focused=Math.max(0,focused-1); updateCarousel(); }
-      if(e.key==='Enter') openBook(focused);
+    if(viewMode === 'carousel'){
+      if(e.key === 'ArrowRight'){ focused = Math.min(books.length - 1, focused + 1); updateCarousel(); }
+      if(e.key === 'ArrowLeft'){ focused = Math.max(0, focused - 1); updateCarousel(); }
+      if(e.key === 'Enter') openBook(focused);
     }
   }
 });
 
-/* ===== HELPERS ===== */
 function cleanName(path){
   return path.split('/').pop().replace('.pdf','').replace(/[_-]/g,' ');
 }
