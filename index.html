@@ -471,9 +471,7 @@ body{
 
     <div class="reader-row">
 
-      <div class="page-info" id="page-info">
-        1 / 1
-      </div>
+     
 
     </div>
 
@@ -530,8 +528,6 @@ document.getElementById('reader');
 const canvas =
 document.getElementById('pdf-canvas');
 
-const pageInfo =
-document.getElementById('page-info');
 
 const readerProgressFill =
 document.getElementById('reader-progress-fill');
@@ -944,8 +940,7 @@ async function renderPage(num){
 
   /* PAGE TEXT */
 
-  pageInfo.textContent =
-  `${num} / ${currentDoc.numPages}`;
+
 
   /* TOP BAR PROGRESS */
 
