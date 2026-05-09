@@ -1,62 +1,50 @@
 [
   {
     "path": "Pdf/1 Harry Potter and the Sorcerer's Stone.pdf",
-    "title": "1 Harry Potter and the Sorcerer's Stone",
-    "cover": 1
+    "title": "1 Harry Potter and the Sorcerer's Stone"
   },
   {
     "path": "Pdf/2 Harry Potter and the Chamber of Secrets.pdf",
-    "title": "2 Harry Potter and the Chamber of Secrets",
-    "cover": 1
+    "title": "2 Harry Potter and the Chamber of Secrets"
   },
   {
     "path": "Pdf/3 Harry Potter and the Prisoner of Azkaban.pdf",
-    "title": "3 Harry Potter and the Prisoner of Azkaban",
-    "cover": 1
+    "title": "3 Harry Potter and the Prisoner of Azkaban"
   },
   {
     "path": "Pdf/4 Harry Potter and the Goblet of Fire.pdf",
-    "title": "4 Harry Potter and the Goblet of Fire",
-    "cover": 1
+    "title": "4 Harry Potter and the Goblet of Fire"
   },
   {
     "path": "Pdf/5 Harry Potter and the Order of the Phoenix.pdf",
-    "title": "5 Harry Potter and the Order of the Phoenix",
-    "cover": 1
+    "title": "5 Harry Potter and the Order of the Phoenix"
   },
   {
     "path": "Pdf/7 Harry Potter andThe Deathly Hallows.pdf",
-    "title": "7 Harry Potter andThe Deathly Hallows",
-    "cover": 1
+    "title": "7 Harry Potter andThe Deathly Hallows"
   },
   {
     "path": "Pdf/Harry Potter and the Half-Blood Prince Book 6.pdf",
-    "title": "Harry Potter and the Half-Blood Prince Book 6",
-    "cover": 1
+    "title": "Harry Potter and the Half-Blood Prince Book 6"
   },
   {
     "path": "Pdf/Keeping_13.pdf",
-    "title": "Keeping 13",
-    "cover": 1
+    "title": "Keeping 13"
   },
   {
     "path": "Pdf/The City of Ember.pdf",
-    "title": "The City of Ember",
-    "cover": 1
+    "title": "The City of Ember"
   },
   {
     "path": "Pdf/The Diamond of Darkhold.pdf",
-    "title": "The Diamond of Darkhold",
-    "cover": 1
+    "title": "The Diamond of Darkhold"
   },
   {
     "path": "Pdf/The People of Sparks.pdf",
-    "title": "The People of Sparks",
-    "cover": 1
+    "title": "The People of Sparks"
   },
   {
     "path": "Pdf/The Prophet of Yonwood .pdf",
-    "title": "The Prophet of Yonwood",
-    "cover": 1
+    "title": "The Prophet of Yonwood"
   }
 ]
