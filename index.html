@@ -447,8 +447,11 @@ let focused = 0;
 let currentDoc = null;
 let currentPage = 1;
 let currentBook = null;
-let viewMode = 'carousel'; // 'carousel' | 'grid'
-let sortMode = 'title';    // 'title' | 'progress' | 'recent'
+const thumbnailCache = {}; // index -> canvas element
+
+// persist view/sort
+let viewMode = localStorage.getItem('kindle::viewMode') || 'carousel';
+let sortMode = localStorage.getItem('kindle::sortMode') || 'title';
 
 /* ===== SETTINGS PANEL TOGGLE ===== */
 settingsBtn.addEventListener('click', e=>{
@@ -462,39 +465,38 @@ document.addEventListener('click', e=>{
 });
 
 /* ===== VIEW TOGGLE ===== */
-document.getElementById('view-carousel').addEventListener('click', ()=>{
-  viewMode = 'carousel';
-  document.getElementById('view-carousel').classList.add('active');
-  document.getElementById('view-grid').classList.remove('active');
-  carousel.style.display = '';
-  gridView.classList.remove('active');
-  updateCarousel();
-});
+function applyViewMode(mode){
+  viewMode = mode;
+  localStorage.setItem('kindle::viewMode', mode);
+  document.getElementById('view-carousel').classList.toggle('active', mode === 'carousel');
+  document.getElementById('view-grid').classList.toggle('active', mode === 'grid');
+  if(mode === 'carousel'){
+    carousel.style.display = '';
+    gridView.classList.remove('active');
+    updateCarousel();
+  } else {
+    carousel.style.display = 'none';
+    gridView.classList.add('active');
+    libraryTitle.textContent = 'My Library';
+    renderGrid();
+  }
+}
 
-document.getElementById('view-grid').addEventListener('click', ()=>{
-  viewMode = 'grid';
-  document.getElementById('view-grid').classList.add('active');
-  document.getElementById('view-carousel').classList.remove('active');
-  carousel.style.display = 'none';
-  gridView.classList.add('active');
-  libraryTitle.textContent = 'My Library';
-  renderGrid();
-});
+document.getElementById('view-carousel').addEventListener('click', ()=>applyViewMode('carousel'));
+document.getElementById('view-grid').addEventListener('click', ()=>applyViewMode('grid'));
 
 /* ===== SORT ===== */
+function applySortMode(mode){
+  sortMode = mode;
+  localStorage.setItem('kindle::sortMode', mode);
+  document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sort-'+mode).classList.add('active');
+  if(viewMode === 'carousel'){ rebuildCarousel(); updateCarousel(); }
+  else { renderGrid(); }
+}
+
 ['sort-title','sort-progress','sort-recent'].forEach(id=>{
-  document.getElementById(id).addEventListener('click', ()=>{
-    document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    sortMode = id.replace('sort-','');
-    sortBooks();
-    if(viewMode === 'carousel'){
-      rebuildCarousel();
-      updateCarousel();
-    } else {
-      renderGrid();
-    }
-  });
+  document.getElementById(id).addEventListener('click', ()=>applySortMode(id.replace('sort-','')));
 });
 
 function getSortedIndices(){
@@ -524,7 +526,6 @@ function getProgress(path){
   return (page - 1) / (total - 1);
 }
 
-function sortBooks(){ /* order is applied via getSortedIndices, books array unchanged */ }
 
 /* ===== LOAD LIBRARY ===== */
 async function loadLibrary(){
@@ -559,7 +560,12 @@ async function loadLibrary(){
     renderThumbnail(pdfjsLib, i);
   }
 
-  updateCarousel();
+  // Apply persisted sort button state
+  document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sort-'+sortMode).classList.add('active');
+
+  // Apply persisted view mode (after books & thumbnails are kicked off)
+  applyViewMode(viewMode);
 
   track.addEventListener('click', e=>{
     const book = e.target.closest('.book');
@@ -613,18 +619,11 @@ function renderGrid(){
     coverEl.className = 'grid-cover';
     coverEl.id = 'grid-cover-'+i;
 
-    // reuse rendered thumbnail canvas if available
-    const existingCover = document.getElementById('cover-'+i);
-    if(existingCover){
-      const c = existingCover.querySelector('canvas');
-      if(c){
-        const clone = c.cloneNode(true);
-        coverEl.appendChild(clone);
-      } else {
-        coverEl.innerHTML = '<div class="shimmer"></div>';
-      }
+    if(thumbnailCache[i]){
+      coverEl.appendChild(thumbnailCache[i].cloneNode(true));
     } else {
       coverEl.innerHTML = '<div class="shimmer"></div>';
+      // will be filled in by renderThumbnail when it completes
     }
 
     const percent = getProgress(book.path) * 100;
@@ -634,7 +633,7 @@ function renderGrid(){
 
     const prog = document.createElement('div');
     prog.className = 'grid-progress';
-    prog.innerHTML = `<div class="grid-progress-fill" style="width:${percent}%"></div>`;
+    prog.innerHTML = `<div class="grid-progress-fill" style="width:${Math.round(percent)}%"></div>`;
 
     el.appendChild(coverEl);
     el.appendChild(titleEl);
@@ -688,7 +687,7 @@ async function renderThumbnail(pdfjsLib,i){
     const doc = await pdfjsLib.getDocument('./'+book.path).promise;
     localStorage.setItem('total::'+book.path, doc.numPages);
     const savedPage = Number(localStorage.getItem('page::'+book.path))||1;
-    const percent = ((savedPage-1)/(doc.numPages-1))*100;
+    const percent = doc.numPages > 1 ? ((savedPage-1)/(doc.numPages-1))*100 : 0;
     const fill = document.getElementById('fill-'+i);
     if(fill) fill.style.width=percent+'%';
     const page = await doc.getPage(1);
@@ -696,8 +695,18 @@ async function renderThumbnail(pdfjsLib,i){
     const c = document.createElement('canvas');
     c.width=vp.width; c.height=vp.height;
     await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+
+    // store in cache
+    thumbnailCache[i] = c;
+
+    // update carousel cover
     const cover = document.getElementById('cover-'+i);
-    if(cover){ cover.innerHTML=''; cover.appendChild(c); }
+    if(cover){ cover.innerHTML=''; cover.appendChild(c.cloneNode(true)); }
+
+    // update grid cover if it exists
+    const gridCover = document.getElementById('grid-cover-'+i);
+    if(gridCover){ gridCover.innerHTML=''; gridCover.appendChild(c.cloneNode(true)); }
+
   }catch(err){ console.error(err); }
 }
 
