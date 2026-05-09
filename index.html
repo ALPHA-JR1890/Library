@@ -45,6 +45,7 @@ html,body{
   align-items:center;
   justify-content:center;
   position:relative;
+  overflow:hidden;
 }
 
 #title{
@@ -53,9 +54,11 @@ html,body{
   left:50%;
   transform:translateX(-50%);
   max-width:90vw;
-  text-align:center;
+  font-size:18px;
   white-space:nowrap;
   overflow:hidden;
+  text-overflow:ellipsis;
+  z-index:10;
 }
 
 .carousel{
@@ -72,6 +75,11 @@ html,body{
   gap:28px;
   padding:0 100px;
   transition:transform .5s var(--ease);
+
+  /* FIX CLICK BLOCKING */
+  position:relative;
+  z-index:5;
+  pointer-events:auto;
 }
 
 .book{
@@ -81,7 +89,7 @@ html,body{
   opacity:.4;
   transform:scale(.85);
   cursor:pointer;
-  transition:.4s;
+  transition:.4s ease;
 }
 
 .book.active{
@@ -96,12 +104,17 @@ html,body{
   border-radius:5px;
   overflow:hidden;
   box-shadow:-5px 0 0 var(--accent), 0 10px 25px var(--shadow);
-  transition:width .4s, height .4s;
+  transition:width .4s,height .4s;
 }
 
 .book.active .cover{
   width:200px;
   height:280px;
+}
+
+.cover canvas{
+  width:100%;
+  height:100%;
 }
 
 /* ================= READER ================= */
@@ -126,7 +139,16 @@ html,body{
   left:0;
   right:0;
   padding:16px 20px;
-  z-index:10;
+  z-index:20;
+}
+
+.reader-title{
+  text-align:center;
+  font-size:16px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  margin-bottom:10px;
 }
 
 .progress{
@@ -144,18 +166,7 @@ html,body{
   transition:width .3s ease;
 }
 
-/* TITLE (AUTO SHRINK) */
-
-.reader-title{
-  font-size:1rem;
-  text-align:center;
-  white-space:nowrap;
-  overflow:hidden;
-  width:100%;
-  margin-bottom:10px;
-}
-
-/* PAGE AREA */
+/* PAGE */
 
 .page-wrap{
   flex:1;
@@ -163,11 +174,13 @@ html,body{
   align-items:center;
   justify-content:center;
   position:relative;
+  overflow:hidden;
 }
 
 #pdf{
   max-width:100%;
   max-height:100%;
+  display:block;
 }
 
 /* ================= PAGE FLIP ================= */
@@ -178,6 +191,8 @@ html,body{
   background:var(--bg);
   transform-origin:left;
   opacity:0;
+
+  /* FIX CLICK BLOCKING */
   pointer-events:none;
 }
 
@@ -209,6 +224,7 @@ html,body{
 
 <body>
 
+<!-- LIBRARY -->
 <div id="library">
   <div id="title"></div>
 
@@ -217,16 +233,14 @@ html,body{
   </div>
 </div>
 
+<!-- READER -->
 <div id="reader">
 
   <div class="topbar">
-
     <div class="reader-title" id="reader-title"></div>
-
     <div class="progress">
       <div class="progress-fill" id="fill"></div>
     </div>
-
   </div>
 
   <div id="left" class="nav"></div>
@@ -285,9 +299,7 @@ async function load(){
     el.className='book';
     el.dataset.i=i;
 
-    el.innerHTML=`
-      <div class="cover"></div>
-    `;
+    el.innerHTML=`<div class="cover"></div>`;
 
     track.appendChild(el);
   });
@@ -299,8 +311,9 @@ async function load(){
 
     const i=+b.dataset.i;
 
-    if(i===focused) open(i);
-    else{
+    if(i===focused){
+      open(i);
+    }else{
       focused=i;
       update();
     }
@@ -318,8 +331,9 @@ function update(){
     b.classList.toggle('active',i===focused);
   });
 
-  title.textContent=books[focused]?.title||'';
-  fitText(title, 24);
+  if(books[focused]){
+    title.textContent=books[focused].title;
+  }
 }
 
 /* ================= OPEN ================= */
@@ -338,7 +352,6 @@ async function open(i){
   reader.classList.add('active');
 
   readerTitle.textContent=currentBook.title;
-  fitText(readerTitle, 18);
 
   render(page);
 }
@@ -383,22 +396,6 @@ function triggerFlip(){
 
 left.onclick=()=>page>1&&render(page-1);
 right.onclick=()=>page<currentDoc.numPages&&render(page+1);
-
-/* ================= AUTO FIT TEXT ================= */
-
-function fitText(el, max){
-
-  let size=max;
-
-  el.style.fontSize=size+'px';
-
-  while(el.scrollWidth>el.clientWidth && size>10){
-    size--;
-    el.style.fontSize=size+'px';
-  }
-}
-
-/* ================= START ================= */
 
 load();
 
