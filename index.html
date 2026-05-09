@@ -689,7 +689,11 @@ async function renderThumbnail(pdfjsLib,i){
   const book=books[i];
   try{
     const url = book.path.startsWith('http') ? book.path : './'+book.path;
-    const doc = await pdfjsLib.getDocument(url).promise;
+    const doc = await pdfjsLib.getDocument({
+      url,
+      stopAtErrors: false,
+      ignoreErrors: true
+    }).promise;
     localStorage.setItem('total::'+book.path, doc.numPages);
     const savedPage = Number(localStorage.getItem('page::'+book.path))||1;
     const percent = doc.numPages > 1 ? ((savedPage-1)/(doc.numPages-1))*100 : 0;
@@ -700,20 +704,21 @@ async function renderThumbnail(pdfjsLib,i){
     const vp = page.getViewport({scale:0.42});
     const c = document.createElement('canvas');
     c.width=vp.width; c.height=vp.height;
-    await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+    try{
+      await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+    }catch(renderErr){
+      // partial render is fine — show whatever made it onto the canvas
+      console.warn('Partial render for', book.title, renderErr.message);
+    }
 
-    // store in cache
+    // store in cache and display even if render was partial
     thumbnailCache[i] = c;
-
-    // update carousel cover
     const cover = document.getElementById('cover-'+i);
     if(cover){ cover.innerHTML=''; cover.appendChild(c.cloneNode(true)); }
-
-    // update grid cover if it exists
     const gridCover = document.getElementById('grid-cover-'+i);
     if(gridCover){ gridCover.innerHTML=''; gridCover.appendChild(c.cloneNode(true)); }
 
-  }catch(err){ console.error(err); }
+  }catch(err){ console.error('Failed to load', book.title, err.message); }
 }
 
 /* ===== OPEN BOOK ===== */
@@ -725,7 +730,7 @@ async function openBook(i){
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
   currentBook=book;
   const bookUrl = book.path.startsWith('http') ? book.path : './'+book.path;
-  currentDoc=await pdfjsLib.getDocument(bookUrl).promise;
+  currentDoc=await pdfjsLib.getDocument({ url: bookUrl, stopAtErrors: false, ignoreErrors: true }).promise;
   localStorage.setItem('recent::'+book.path, Date.now());
   currentPage=Number(localStorage.getItem('page::'+book.path))||1;
   currentPage=Math.max(1,Math.min(currentPage,currentDoc.numPages));
@@ -741,7 +746,9 @@ async function renderPage(num){
   const scale=Math.min(window.innerWidth/base.width,window.innerHeight/base.height);
   const vp=page.getViewport({scale});
   canvas.width=vp.width; canvas.height=vp.height;
-  await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+  try{
+    await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+  }catch(e){ console.warn('Partial page render:', e.message); }
   currentPage=num;
   localStorage.setItem('page::'+currentBook.path,num);
   pageInfo.textContent=`${num} / ${currentDoc.numPages}`;
