@@ -20,27 +20,25 @@ jobs:
           import json, os, re
           from pypdf import PdfReader
 
-          def clean_title(path):
+          def title_from_filename(path):
               name = os.path.basename(path)
               name = re.sub(r'\.pdf$', '', name, flags=re.IGNORECASE)
-              name = re.sub(r'[_-]+', ' ', name)
+              name = re.sub(r'[_]+', ' ', name)
               return name.strip()
 
           def get_cover_page(reader):
+              """
+              Return the 1-based page number of the first page that has an image
+              (likely the actual cover). Falls back to page 1.
+              """
               for i, page in enumerate(reader.pages[:10], start=1):
-                  text = (page.extract_text() or '').strip()
-                  if len(text) > 30:
-                      return i
+                  if '/XObject' in (page.get('/Resources') or {}):
+                      xobjects = page['/Resources']['/XObject'].get_object()
+                      for obj in xobjects.values():
+                          o = obj.get_object()
+                          if o.get('/Subtype') == '/Image':
+                              return i
               return 1
-
-          def get_title(reader, path):
-              try:
-                  meta = reader.metadata
-                  if meta and meta.title and len(meta.title.strip()) > 1:
-                      return meta.title.strip()
-              except Exception:
-                  pass
-              return clean_title(path)
 
           repo_entries = []
           for root, dirs, files in os.walk('.'):
@@ -49,14 +47,13 @@ jobs:
                   if fname.lower().endswith('.pdf'):
                       full = os.path.join(root, fname)
                       rel  = full[2:]
+                      title = title_from_filename(rel)
+                      cover = 1
                       try:
                           reader = PdfReader(full, strict=False)
-                          title  = get_title(reader, rel)
                           cover  = get_cover_page(reader)
                       except Exception as e:
                           print(f"Warning: could not read {rel}: {e}")
-                          title = clean_title(rel)
-                          cover = 1
                       repo_entries.append({
                           "path":  rel,
                           "title": title,
