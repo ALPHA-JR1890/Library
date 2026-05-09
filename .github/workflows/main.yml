@@ -1,15 +1,12 @@
 name: Generate PDF List
-
 on:
   push:
     branches: ["**"]
-
 jobs:
   update-list:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,9 +17,29 @@ jobs:
             | sed 's|^\./||' \
             | sort \
             | python3 -c "
-          import json, sys
-          files = [line.strip() for line in sys.stdin if line.strip()]
-          print(json.dumps(files, indent=2))
+          import json, sys, os
+
+          # PDFs found in the repo
+          repo_files = [line.strip() for line in sys.stdin if line.strip()]
+
+          # Load existing pdf-list.json and keep any non-repo entries (e.g. Drive URLs)
+          existing = []
+          if os.path.exists('pdf-list.json'):
+              try:
+                  with open('pdf-list.json') as f:
+                      existing = json.load(f)
+              except Exception:
+                  existing = []
+
+          # Preserve entries that are dicts (have a 'path' key pointing to an external URL)
+          external = [
+              e for e in existing
+              if isinstance(e, dict) and e.get('path', '').startswith('http')
+          ]
+
+          # Merge: repo files first, then external entries
+          merged = repo_files + external
+          print(json.dumps(merged, indent=2))
           " > pdf-list.json
 
       - name: Commit and push
