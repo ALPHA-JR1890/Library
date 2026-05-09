@@ -7,33 +7,18 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Happy+Monkey&display=swap" rel="stylesheet">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
-
 <style>
-:root{
-  --bg:#f5f0e8;
-  --muted:#7f7568;
-  --blue:#3b82f6;
-  --blue-bg:#dbeafe;
-  --font:'Happy Monkey', cursive;
-}
-
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
-}
-
 body{
-  font-family:var(--font);
-  background:var(--bg);
+  margin:0;
+  font-family:'Happy Monkey', cursive;
+  background:#f5f0e8;
   overflow:hidden;
 }
 
 /* LIBRARY */
 #library{
   width:100%;
-  height:100%;
+  height:100vh;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -42,10 +27,10 @@ body{
 
 #title{
   position:absolute;
-  top:18px;
+  top:20px;
   width:100%;
   text-align:center;
-  color:var(--muted);
+  color:#7f7568;
 }
 
 .track{
@@ -56,14 +41,12 @@ body{
 }
 
 .book{
-  opacity:.4;
+  opacity:.5;
   transform:scale(.85);
-  transition:.3s;
   cursor:pointer;
   display:flex;
   flex-direction:column;
   align-items:center;
-  pointer-events:auto;
 }
 
 .book.active{
@@ -87,11 +70,10 @@ body{
   pointer-events:none;
 }
 
-/* progress */
 .progress{
   width:140px;
   height:5px;
-  background:var(--blue-bg);
+  background:#dbeafe;
   border-radius:999px;
   overflow:hidden;
   margin-top:6px;
@@ -100,7 +82,7 @@ body{
 .fill{
   height:100%;
   width:0%;
-  background:var(--blue);
+  background:#3b82f6;
   transition:width .3s ease;
 }
 
@@ -110,7 +92,7 @@ body{
   inset:0;
   display:none;
   flex-direction:column;
-  background:var(--bg);
+  background:#f5f0e8;
 }
 
 #reader.active{
@@ -118,10 +100,10 @@ body{
 }
 
 .top{
-  padding:14px 16px;
   display:flex;
   justify-content:space-between;
-  color:var(--muted);
+  padding:14px;
+  color:#7f7568;
 }
 
 #canvas{
@@ -172,7 +154,12 @@ canvas{
 
 </div>
 
-<script type="module">
+<!-- ✅ STABLE PDF.JS (NO MODULE BUGS) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js"></script>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js";
 
 let books=[];
 let pdfDoc=null;
@@ -185,18 +172,8 @@ const canvas=document.getElementById("pdf");
 const pageInfo=document.getElementById("pageInfo");
 const bookTitle=document.getElementById("bookTitle");
 
-/* PDF LIB */
-async function lib(){
-  while(!window.pdfjsLib){
-    await new Promise(r=>setTimeout(r,50));
-  }
-  return window.pdfjsLib;
-}
-
 /* LOAD BOOKS */
 async function load(){
-
-  const pdfjsLib=await lib();
 
   const res=await fetch("./pdf-list.json");
   books=await res.json();
@@ -211,27 +188,27 @@ async function load(){
       <div class="progress"><div class="fill"></div></div>
     `;
 
-    el.onclick=()=>open(i);
+    el.addEventListener("click",()=>open(i));
 
     track.appendChild(el);
 
-    renderThumb(b,i,pdfjsLib);
+    renderThumb(b,i);
   });
 }
 
-/* THUMBNAILS */
-async function renderThumb(book,i,pdfjsLib){
+/* THUMBNAIL */
+async function renderThumb(book,i){
 
   const doc=await pdfjsLib.getDocument(book.path).promise;
 
-  const page=await doc.getPage(1);
-  const vp=page.getViewport({scale:0.4});
+  const p=await doc.getPage(1);
+  const vp=p.getViewport({scale:0.4});
 
   const c=document.createElement("canvas");
   c.width=vp.width;
   c.height=vp.height;
 
-  await page.render({
+  await p.render({
     canvasContext:c.getContext("2d"),
     viewport:vp
   }).promise;
@@ -248,11 +225,14 @@ async function renderThumb(book,i,pdfjsLib){
 /* OPEN BOOK */
 async function open(i){
 
-  const pdfjsLib=await lib();
-
   currentBook=books[i];
 
   pdfDoc=await pdfjsLib.getDocument(currentBook.path).promise;
+
+  if(!pdfDoc){
+    alert("Failed to load PDF");
+    return;
+  }
 
   page=Number(localStorage.getItem(currentBook.path))||1;
 
@@ -263,19 +243,30 @@ async function open(i){
   render();
 }
 
-/* RENDER PAGE */
+/* ✅ FIXED RENDER (NO BLANK PAGE BUG) */
 async function render(){
 
-  const p=await pdfDoc.getPage(page);
+  const pageObj=await pdfDoc.getPage(page);
 
-  const vp=p.getViewport({scale:1.5});
+  const viewport1=pageObj.getViewport({scale:1});
 
-  canvas.width=vp.width;
-  canvas.height=vp.height;
+  const scale=Math.min(
+    window.innerWidth/viewport1.width,
+    window.innerHeight/viewport1.height
+  );
 
-  await p.render({
-    canvasContext:canvas.getContext("2d"),
-    viewport:vp
+  const viewport=pageObj.getViewport({scale});
+
+  const ctx=canvas.getContext("2d");
+
+  canvas.width=viewport.width;
+  canvas.height=viewport.height;
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  await pageObj.render({
+    canvasContext:ctx,
+    viewport:viewport
   }).promise;
 
   pageInfo.textContent=`${page} / ${pdfDoc.numPages}`;
@@ -292,9 +283,9 @@ function updateProgress(){
 
   const percent=((page-1)/(pdfDoc.numPages-1))*100;
 
-  const fill=track.children[idx].querySelector(".fill");
-
-  fill.style.width=percent+"%";
+  track.children[idx]
+    .querySelector(".fill")
+    .style.width=percent+"%";
 }
 
 /* NAV */
@@ -307,7 +298,6 @@ document.getElementById("right").onclick=()=>{
 };
 
 load();
-
 </script>
 
 </body>
