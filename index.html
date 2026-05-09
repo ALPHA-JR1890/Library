@@ -471,10 +471,6 @@ body{
 
     <div class="reader-row">
 
-      <div class="reader-title" id="reader-title">
-        Book
-      </div>
-
       <div class="page-info" id="page-info">
         1 / 1
       </div>
@@ -536,9 +532,6 @@ document.getElementById('pdf-canvas');
 
 const pageInfo =
 document.getElementById('page-info');
-
-const readerTitle =
-document.getElementById('reader-title');
 
 const readerProgressFill =
 document.getElementById('reader-progress-fill');
@@ -899,8 +892,6 @@ async function openBook(i){
     )
   );
 
-  readerTitle.textContent =
-  book.title;
 
   reader.classList.add('active');
 
