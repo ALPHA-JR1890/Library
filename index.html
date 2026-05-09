@@ -541,8 +541,8 @@ async function loadLibrary(){
   }
 
   books = raw.map(item=>{
-    if(typeof item === 'string') return{ path:item, title:cleanName(item) };
-    return{ path:item.path, title:item.title || cleanName(item.path) };
+    if(typeof item === 'string') return{ path:item, title:cleanName(item), cover:1 };
+    return{ path:item.path, title:item.title || cleanName(item.path), cover:item.cover || 1 };
   });
 
   const pdfjsLib = await getPdfjsLib();
@@ -688,7 +688,8 @@ function setupDragging(){
 async function renderThumbnail(pdfjsLib,i){
   const book=books[i];
   try{
-    const doc = await pdfjsLib.getDocument('./'+book.path).promise;
+    const url = book.path.startsWith('http') ? book.path : './'+book.path;
+    const doc = await pdfjsLib.getDocument(url).promise;
     localStorage.setItem('total::'+book.path, doc.numPages);
     const savedPage = Number(localStorage.getItem('page::'+book.path))||1;
     const percent = doc.numPages > 1 ? ((savedPage-1)/(doc.numPages-1))*100 : 0;
@@ -723,7 +724,8 @@ async function openBook(i){
   pdfjsLib.GlobalWorkerOptions.workerSrc=
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
   currentBook=book;
-  currentDoc=await pdfjsLib.getDocument('./'+book.path).promise;
+  const bookUrl = book.path.startsWith('http') ? book.path : './'+book.path;
+  currentDoc=await pdfjsLib.getDocument(bookUrl).promise;
   localStorage.setItem('recent::'+book.path, Date.now());
   currentPage=Number(localStorage.getItem('page::'+book.path))||1;
   currentPage=Math.max(1,Math.min(currentPage,currentDoc.numPages));
