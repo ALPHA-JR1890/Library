@@ -1,23 +1,34 @@
 name: Generate PDF List
-on: [push]
+
+on:
+  push:
+    branches: ["**"]
+
 jobs:
   update-list:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Create JSON List
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate pdf-list.json
         run: |
-          # This finds EVERY pdf in your repo, no matter where it is hidden
-          echo "[" > pdf-list.json
-          find . -iname "*.pdf" -not -path "*/.*" | sed 's|^\./||' | sed 's/^/"/;s/$/",/' >> pdf-list.json
-          sed -i '$ s/,$//' pdf-list.json
-          echo "]" >> pdf-list.json
-      - name: Save to Repo
+          find . -iname "*.pdf" -not -path "*/.*" \
+            | sed 's|^\./||' \
+            | sort \
+            | python3 -c "
+          import json, sys
+          files = [line.strip() for line in sys.stdin if line.strip()]
+          print(json.dumps(files, indent=2))
+          " > pdf-list.json
+
+      - name: Commit and push
         run: |
-          git config --global user.name "github-actions[bot]"
+          git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add pdf-list.json
-          git commit -m "Update PDF library" || echo "No changes"
-          git push
+          git diff --cached --quiet && echo "No changes, skipping commit." || \
+            (git commit -m "chore: update PDF library list" && git push)
