@@ -541,8 +541,12 @@ async function loadLibrary(){
   }
 
   books = raw.map(item=>{
-    if(typeof item === 'string') return{ path:item, title:cleanName(item), cover:1 };
-    return{ path:item.path, title:item.title || cleanName(item.path), cover:item.cover || 1 };
+    if(typeof item === 'string') return{ path:item, title:cleanName(item) };
+    return{ 
+      path:item.path, 
+      title:item.title || cleanName(item.path), 
+      coverImage:item.coverImage || null
+    };
   });
 
   const pdfjsLib = await getPdfjsLib();
@@ -688,6 +692,35 @@ function setupDragging(){
 async function renderThumbnail(pdfjsLib,i){
   const book=books[i];
   try{
+    // If there's a custom cover image, use that instead of rendering from PDF
+    if(book.coverImage){
+      const img = new Image();
+      img.onload = ()=>{
+        const c = document.createElement('canvas');
+        c.width = 140;
+        c.height = 200;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0, 140, 200);
+        thumbnailCache[i] = c;
+        const cover = document.getElementById('cover-'+i);
+        if(cover){ cover.innerHTML=''; cover.appendChild(c.cloneNode(true)); }
+        const gridCover = document.getElementById('grid-cover-'+i);
+        if(gridCover){ gridCover.innerHTML=''; gridCover.appendChild(c.cloneNode(true)); }
+      };
+      img.onerror = ()=>{
+        console.warn('Could not load cover image:', book.coverImage);
+        renderPdfThumbnail(pdfjsLib, i, book);
+      };
+      img.src = book.coverImage;
+      return;
+    }
+
+    renderPdfThumbnail(pdfjsLib, i, book);
+  }catch(err){ console.error('Failed to load', book.title, err.message); }
+}
+
+async function renderPdfThumbnail(pdfjsLib, i, book){
+  try{
     const url = book.path.startsWith('http') ? book.path : './'+book.path;
     const doc = await pdfjsLib.getDocument({
       url,
@@ -699,19 +732,16 @@ async function renderThumbnail(pdfjsLib,i){
     const percent = doc.numPages > 1 ? ((savedPage-1)/(doc.numPages-1))*100 : 0;
     const fill = document.getElementById('fill-'+i);
     if(fill) fill.style.width=percent+'%';
-    const coverPage = Math.min(book.cover || 1, doc.numPages);
-    const page = await doc.getPage(coverPage);
+    const page = await doc.getPage(1);
     const vp = page.getViewport({scale:0.42});
     const c = document.createElement('canvas');
     c.width=vp.width; c.height=vp.height;
     try{
       await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
     }catch(renderErr){
-      // partial render is fine — show whatever made it onto the canvas
       console.warn('Partial render for', book.title, renderErr.message);
     }
 
-    // store in cache and display even if render was partial
     thumbnailCache[i] = c;
     const cover = document.getElementById('cover-'+i);
     if(cover){ cover.innerHTML=''; cover.appendChild(c.cloneNode(true)); }
