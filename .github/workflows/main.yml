@@ -11,36 +11,75 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install pypdf
+        run: pip install pypdf --quiet
+
       - name: Generate pdf-list.json
         run: |
-          find . -iname "*.pdf" -not -path "*/.*" \
-            | sed 's|^\./||' \
-            | sort \
-            | python3 -c "
-          import json, sys, os
+          python3 << 'PYEOF'
+          import json, os, re
+          from pypdf import PdfReader
 
-          # PDFs found in the repo
-          repo_files = [line.strip() for line in sys.stdin if line.strip()]
+          def clean_title(path):
+              name = os.path.basename(path)
+              name = re.sub(r'\.pdf$', '', name, flags=re.IGNORECASE)
+              name = re.sub(r'[_-]+', ' ', name)
+              return name.strip()
 
-          # Load existing pdf-list.json and keep any non-repo entries (e.g. Drive URLs)
-          existing = []
+          def get_cover_page(reader):
+              for i, page in enumerate(reader.pages[:10], start=1):
+                  text = (page.extract_text() or '').strip()
+                  if len(text) > 30:
+                      return i
+              return 1
+
+          def get_title(reader, path):
+              try:
+                  meta = reader.metadata
+                  if meta and meta.title and len(meta.title.strip()) > 1:
+                      return meta.title.strip()
+              except Exception:
+                  pass
+              return clean_title(path)
+
+          repo_entries = []
+          for root, dirs, files in os.walk('.'):
+              dirs[:] = [d for d in dirs if not d.startswith('.')]
+              for fname in sorted(files):
+                  if fname.lower().endswith('.pdf'):
+                      full = os.path.join(root, fname)
+                      rel  = full[2:]
+                      try:
+                          reader = PdfReader(full, strict=False)
+                          title  = get_title(reader, rel)
+                          cover  = get_cover_page(reader)
+                      except Exception as e:
+                          print(f"Warning: could not read {rel}: {e}")
+                          title = clean_title(rel)
+                          cover = 1
+                      repo_entries.append({
+                          "path":  rel,
+                          "title": title,
+                          "cover": cover
+                      })
+
+          existing_external = []
           if os.path.exists('pdf-list.json'):
               try:
                   with open('pdf-list.json') as f:
                       existing = json.load(f)
+                  existing_external = [
+                      e for e in existing
+                      if isinstance(e, dict) and e.get('path', '').startswith('http')
+                  ]
               except Exception:
-                  existing = []
+                  pass
 
-          # Preserve entries that are dicts (have a 'path' key pointing to an external URL)
-          external = [
-              e for e in existing
-              if isinstance(e, dict) and e.get('path', '').startswith('http')
-          ]
-
-          # Merge: repo files first, then external entries
-          merged = repo_files + external
-          print(json.dumps(merged, indent=2))
-          " > pdf-list.json
+          merged = repo_entries + existing_external
+          with open('pdf-list.json', 'w') as f:
+              json.dump(merged, f, indent=2)
+          print(f"Written {len(merged)} entries ({len(repo_entries)} repo, {len(existing_external)} external).")
+          PYEOF
 
       - name: Commit and push
         run: |
