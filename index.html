@@ -4,79 +4,519 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Kindle</title>
-
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
+  <style>
+    :root {
+      --paper:      #f5f0e8;
+      --paper-dark: #ede7d6;
+      --ink:        #1a1612;
+      --ink-faint:  #9a8e7e;
+      --accent:     #b5401a;
+      --blue:       #3b82f6;
+      --blue-track: #dbeafe;
+      --border:     #d6cebe;
+      --shadow:     rgba(60,40,10,0.13);
+      --ease:       cubic-bezier(0.16,1,0.3,1);
+      --serif:      'Playfair Display', Georgia, serif;
+      --mono:       'DM Mono', 'Courier New', monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%; overflow: hidden;
+      background: var(--paper); color: var(--ink);
+      font-family: var(--mono); -webkit-font-smoothing: antialiased;
+    }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; }
 
-  <!-- PDF.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module" id="pdfjs-script"></script>
+    /* ── PAGE LAYOUT ── */
+    #page {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 0;
+    }
 
-  <link rel="stylesheet" href="style.css" />
+    /* ── CAROUSEL ── */
+    .carousel {
+      position: relative;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* arrow buttons */
+    .carr-btn {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      z-index: 10; width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--ink-faint); border-radius: 50%;
+      background: rgba(245,240,232,0.9);
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 10px var(--shadow);
+      transition: color .15s, background .15s, opacity .15s;
+      backdrop-filter: blur(4px);
+    }
+    .carr-btn:hover { color: var(--ink); background: var(--paper); }
+    .carr-btn:disabled { opacity: .2; pointer-events: none; }
+    .carr-btn svg { width: 18px; height: 18px; }
+    .carr-btn.left  { left: 16px; }
+    .carr-btn.right { right: 16px; }
+
+    /* track — holds all cards side by side, we translate it */
+    .carr-track-wrap {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .carr-track {
+      display: flex;
+      align-items: flex-end;
+      gap: 32px;
+      transition: transform 0.5s var(--ease);
+      will-change: transform;
+      padding: 40px 60px 20px;
+    }
+
+    /* ── BOOK SLOT ── */
+    .book-slot {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: transform 0.4s var(--ease);
+    }
+    .book-slot:hover { transform: translateY(-6px); }
+
+    /* title above */
+    .slot-title {
+      font-family: var(--serif);
+      font-size: 0.78rem;
+      line-height: 1.35;
+      text-align: center;
+      color: var(--ink);
+      max-width: 148px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 2.2em;
+    }
+
+    /* thumbnail frame */
+    .slot-thumb {
+      width: 148px;
+      height: 210px;
+      position: relative;
+      border-radius: 2px 5px 5px 2px;
+      overflow: hidden;
+      box-shadow: -4px 0 0 0 var(--accent), 4px 8px 20px var(--shadow);
+      background: var(--paper-dark);
+      flex-shrink: 0;
+    }
+    /* page stack edge */
+    .slot-thumb::after {
+      content: ''; position: absolute; right: -3px; top: 4px; bottom: 4px; width: 5px;
+      background: repeating-linear-gradient(to bottom,var(--paper) 0,var(--paper) 2px,var(--paper-dark) 2px,var(--paper-dark) 3px);
+      border-radius: 0 2px 2px 0;
+      z-index: 2;
+    }
+    .slot-thumb canvas {
+      display: block;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    /* loading shimmer */
+    .thumb-shimmer {
+      position: absolute; inset: 0;
+      background: linear-gradient(100deg, var(--paper-dark) 30%, var(--paper) 50%, var(--paper-dark) 70%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      z-index: 1;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    /* focused card scale */
+    .book-slot.focused .slot-thumb {
+      box-shadow: -4px 0 0 0 var(--accent), 6px 16px 32px rgba(60,40,10,0.22);
+    }
+    .book-slot.focused { transform: translateY(-10px) scale(1.04); }
+    .book-slot.focused:hover { transform: translateY(-14px) scale(1.04); }
+
+    /* dimmed side cards */
+    .book-slot.dim { opacity: 0.45; transform: scale(0.92); }
+    .book-slot.dim:hover { opacity: 0.65; transform: scale(0.92) translateY(-4px); }
+
+    /* progress bar below */
+    .slot-bar {
+      width: 148px; height: 3px;
+      background: var(--blue-track);
+      border-radius: 2px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .slot-fill {
+      height: 100%;
+      background: var(--blue);
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    /* ── READER ── */
+    #reader {
+      position: fixed; inset: 0; background: #1c1712;
+      display: none; flex-direction: column; z-index: 200;
+    }
+    .reader-toolbar {
+      display: flex; align-items: center; gap: 14px; padding: 12px 24px;
+      background: #110f0b; border-bottom: 1px solid #2e2820; flex-shrink: 0;
+    }
+    .tool-btn { color: #7a6e60; width: 36px; height: 36px; display: flex; align-items: center;
+                justify-content: center; border-radius: 4px; transition: color .15s, background .15s; }
+    .tool-btn svg { width: 20px; height: 20px; }
+    .tool-btn:hover { color: #f5f0e8; background: #2a2520; }
+    .tool-title { font-family: var(--serif); font-style: italic; font-size: 1rem; color: #c8bfad;
+                  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tool-pages { font-size: 0.68rem; letter-spacing: 0.1em; color: #5a5040; flex-shrink: 0; }
+    .reader-body { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .pg-btn { flex-shrink: 0; width: 52px; height: 52px; display: flex; align-items: center;
+              justify-content: center; color: #3a3028; border-radius: 50%; transition: color .15s, background .15s; }
+    .pg-btn svg { width: 22px; height: 22px; }
+    .pg-btn:hover { color: #f5f0e8; background: #2a2520; }
+    .pg-btn:disabled { opacity: .2; pointer-events: none; }
+    .canvas-wrap { flex: 1; height: 100%; display: flex; align-items: center;
+                   justify-content: center; overflow: hidden; position: relative; }
+    #pdf-canvas { display: block; max-width: 100%; max-height: 100%; box-shadow: 0 8px 48px rgba(0,0,0,.6); }
+    .r-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+               background: #1c1712; opacity: 0; pointer-events: none; transition: opacity .2s; }
+    .r-loading.on { opacity: 1; pointer-events: all; }
+    .spinner { width: 28px; height: 28px; border: 2px solid #3a3028; border-top-color: var(--blue);
+               border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) {
+      .carr-btn.left  { left: 4px; }
+      .carr-btn.right { right: 4px; }
+      .slot-thumb { width: 118px; height: 170px; }
+      .slot-title, .slot-bar { max-width: 118px; width: 118px; }
+      .carr-track { gap: 20px; padding: 28px 40px 16px; }
+    }
+  </style>
 </head>
 <body>
 
-  <!-- ── LIBRARY VIEW ── -->
-  <div id="library-view">
-
-    <header class="site-header">
-      <div class="header-inner">
-        <span class="header-eyebrow">personal library</span>
-        <h1 class="header-title">My Kindle</h1>
-      </div>
-      <div class="header-line"></div>
-    </header>
-
-    <main class="shelf-wrapper">
-      <div class="shelf" id="shelf">
-        <!-- book cards injected by JS -->
-      </div>
-      <p class="empty-msg" id="empty-msg" hidden>No PDFs found in this repository.</p>
-    </main>
-
-    <footer class="site-footer">
-      <span id="book-count">— books</span>
-    </footer>
-
-  </div>
-
-  <!-- ── READER VIEW ── -->
-  <div id="reader-view" hidden>
-
-    <div class="reader-toolbar">
-      <button class="toolbar-btn" id="back-btn" title="Back to library">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M19 12H5M12 5l-7 7 7 7"/>
-        </svg>
-      </button>
-      <span class="toolbar-title" id="reader-title"></span>
-      <span class="toolbar-pages" id="page-indicator">— / —</span>
+<div id="page">
+  <div class="carousel" id="carousel">
+    <button class="carr-btn left"  id="arr-left"  disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="carr-track-wrap">
+      <div class="carr-track" id="carr-track"></div>
     </div>
-
-    <div class="reader-body">
-      <button class="page-btn page-prev" id="prev-btn" title="Previous page">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M15 18l-6-6 6-6"/>
-        </svg>
-      </button>
-
-      <div class="canvas-wrap">
-        <canvas id="pdf-canvas"></canvas>
-        <div class="page-loading" id="page-loading">
-          <span class="spinner"></span>
-        </div>
-      </div>
-
-      <button class="page-btn page-next" id="next-btn" title="Next page">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M9 18l6-6-6-6"/>
-        </svg>
-      </button>
-    </div>
-
+    <button class="carr-btn right" id="arr-right" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
   </div>
+</div>
 
-  <script src="app.js" type="module"></script>
+<!-- READER -->
+<div id="reader">
+  <div class="reader-toolbar">
+    <button class="tool-btn" id="back-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+    </button>
+    <span class="tool-title" id="reader-title"></span>
+    <span class="tool-pages" id="page-num">-- / --</span>
+  </div>
+  <div class="reader-body">
+    <button class="pg-btn" id="prev-btn" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="canvas-wrap">
+      <canvas id="pdf-canvas"></canvas>
+      <div class="r-loading" id="r-loading"><span class="spinner"></span></div>
+    </div>
+    <button class="pg-btn" id="next-btn" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+  </div>
+</div>
+
+<script type="module">
+  // ── PDF.js ─────────────────────────────────────────────────────────────
+  async function getPdfjsLib() {
+    for (let i = 0; i < 60; i++) {
+      if (window.pdfjsLib) return window.pdfjsLib;
+      await new Promise(r => setTimeout(r, 50));
+    }
+    throw new Error('PDF.js failed to load.');
+  }
+
+  // ── State ──────────────────────────────────────────────────────────────
+  let books      = [];   // [{path, title, coverPage, totalPages}]
+  let focusIdx   = 0;
+  let currentDoc  = null;
+  let currentPage = 1;
+  let currentPath = '';
+  let rendering   = false;
+
+  // ── DOM ────────────────────────────────────────────────────────────────
+  const page      = document.getElementById('page');
+  const reader    = document.getElementById('reader');
+  const track     = document.getElementById('carr-track');
+  const arrL      = document.getElementById('arr-left');
+  const arrR      = document.getElementById('arr-right');
+  const backBtn   = document.getElementById('back-btn');
+  const prevBtn   = document.getElementById('prev-btn');
+  const nextBtn   = document.getElementById('next-btn');
+  const rTitle    = document.getElementById('reader-title');
+  const pageNum   = document.getElementById('page-num');
+  const pdfCanvas = document.getElementById('pdf-canvas');
+  const rLoading  = document.getElementById('r-loading');
+
+  // ── Load library ────────────────────────────────────────────────────────
+  async function loadLibrary() {
+    let raw = [];
+    try {
+      const res = await fetch('./pdf-list.json?t=' + Date.now());
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      raw = await res.json();
+      if (!Array.isArray(raw)) throw new Error('Not an array');
+    } catch (e) {
+      track.innerHTML = '<p style="font-family:var(--serif);font-style:italic;color:var(--ink-faint);padding:40px">Could not load pdf-list.json — ' + e.message + '</p>';
+      return;
+    }
+
+    // pdf-list.json can be an array of strings OR array of objects:
+    // { "path": "books/foo.pdf", "title": "My Title", "coverPage": 3 }
+    books = raw.map(item => {
+      if (typeof item === 'string') {
+        return { path: item, title: cleanName(item), coverPage: 1, totalPages: null };
+      }
+      return {
+        path:       item.path,
+        title:      item.title || cleanName(item.path),
+        coverPage:  item.coverPage || 1,
+        totalPages: null
+      };
+    });
+
+    const pdfjsLib = await getPdfjsLib();
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+
+    // Build DOM first, then render thumbnails
+    books.forEach((book, i) => {
+      const slot = document.createElement('div');
+      slot.className = 'book-slot';
+      slot.dataset.index = i;
+
+      const savedPage = parseInt(localStorage.getItem('page::' + book.path)) || 1;
+
+      slot.innerHTML =
+        '<div class="slot-title">' + esc(book.title) + '</div>' +
+        '<div class="slot-thumb" id="thumb-' + i + '">' +
+          '<div class="thumb-shimmer" id="shimmer-' + i + '"></div>' +
+        '</div>' +
+        '<div class="slot-bar"><div class="slot-fill" id="fill-' + i + '" style="width:0%"></div></div>';
+
+      slot.addEventListener('click', () => {
+        if (i === focusIdx) {
+          openBook(i);
+        } else {
+          focusIdx = i;
+          updateCarousel();
+        }
+      });
+
+      track.appendChild(slot);
+    });
+
+    arrL.disabled = false;
+    arrR.disabled = false;
+    updateCarousel();
+
+    // Render thumbnails async, one at a time to avoid overload
+    for (let i = 0; i < books.length; i++) {
+      await renderThumbnail(pdfjsLib, i);
+    }
+  }
+
+  async function renderThumbnail(pdfjsLib, i) {
+    const book = books[i];
+    const thumbEl = document.getElementById('thumb-' + i);
+    const shimmer = document.getElementById('shimmer-' + i);
+    if (!thumbEl) return;
+
+    try {
+      const doc  = await pdfjsLib.getDocument('./' + book.path).promise;
+      book.totalPages = doc.numPages;
+
+      // Use coverPage from JSON (default 1)
+      const pageN = Math.max(1, Math.min(book.coverPage, doc.numPages));
+      const pg    = await doc.getPage(pageN);
+
+      const thumbW = 148 * window.devicePixelRatio;
+      const base   = pg.getViewport({ scale: 1 });
+      const scale  = thumbW / base.width;
+      const vp     = pg.getViewport({ scale });
+
+      const c   = document.createElement('canvas');
+      c.width   = vp.width;
+      c.height  = vp.height;
+      await pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+
+      // stretch canvas to fill slot via CSS
+      c.style.width  = '100%';
+      c.style.height = '100%';
+      c.style.objectFit = 'cover';
+      thumbEl.appendChild(c);
+
+      // update progress bar
+      const savedPage = parseInt(localStorage.getItem('page::' + book.path)) || 1;
+      const pct = doc.numPages > 1 ? Math.round(((savedPage - 1) / (doc.numPages - 1)) * 100) : 100;
+      const fill = document.getElementById('fill-' + i);
+      if (fill) fill.style.width = pct + '%';
+
+      doc.destroy();
+    } catch (e) {
+      console.warn('Thumbnail failed for', book.path, e);
+    } finally {
+      if (shimmer) shimmer.remove();
+    }
+  }
+
+  // ── Carousel navigation ──────────────────────────────────────────────
+  function updateCarousel() {
+    const slots = track.querySelectorAll('.book-slot');
+    const total = slots.length;
+    if (!total) return;
+
+    slots.forEach((slot, i) => {
+      const dist = i - focusIdx;
+      slot.classList.remove('focused', 'dim');
+      if (dist === 0)         slot.classList.add('focused');
+      else if (Math.abs(dist) > 2) slot.classList.add('dim');
+    });
+
+    // Translate track so focused card is centred
+    const slotW  = 148 + 32; // card width + gap
+    const centreOffset = (track.parentElement.clientWidth / 2) - (slotW * focusIdx) - (148 / 2) - 60; // 60 = padding-left
+    track.style.transform = 'translateX(' + centreOffset + 'px)';
+
+    arrL.disabled = focusIdx <= 0;
+    arrR.disabled = focusIdx >= total - 1;
+  }
+
+  arrL.addEventListener('click', () => { if (focusIdx > 0) { focusIdx--; updateCarousel(); } });
+  arrR.addEventListener('click', () => { if (focusIdx < books.length - 1) { focusIdx++; updateCarousel(); } });
+
+  window.addEventListener('resize', updateCarousel);
+
+  document.addEventListener('keydown', e => {
+    if (reader.style.display !== 'none') return;
+    if (e.key === 'ArrowLeft')  arrL.click();
+    if (e.key === 'ArrowRight') arrR.click();
+    if (e.key === 'Enter') openBook(focusIdx);
+  });
+
+  // ── Reader ───────────────────────────────────────────────────────────
+  async function openBook(i) {
+    const book = books[i];
+    if (!book) return;
+    setRLoading(true);
+    rTitle.textContent  = book.title;
+    page.style.display  = 'none';
+    reader.style.display = 'flex';
+
+    const pdfjsLib = await getPdfjsLib();
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+
+    try {
+      currentPath = book.path;
+      currentDoc  = await pdfjsLib.getDocument('./' + book.path).promise;
+      currentPage = parseInt(localStorage.getItem('page::' + book.path)) || 1;
+      currentPage = Math.max(1, Math.min(currentPage, currentDoc.numPages));
+    } catch (err) {
+      alert('Could not open "' + book.title + '".\n' + err.message);
+      closeReader(); return;
+    }
+    await renderReaderPage(currentPage);
+  }
+
+  async function renderReaderPage(num) {
+    if (rendering) return;
+    rendering = true; setRLoading(true);
+    try {
+      const pg   = await currentDoc.getPage(num);
+      const wrap = document.querySelector('.canvas-wrap');
+      const maxW = wrap.clientWidth  - 8;
+      const maxH = wrap.clientHeight - 8;
+      const base = pg.getViewport({ scale: 1 });
+      const sc   = Math.min(maxW / base.width, maxH / base.height, 2);
+      const vp   = pg.getViewport({ scale: sc });
+      pdfCanvas.width  = vp.width;
+      pdfCanvas.height = vp.height;
+      await pg.render({ canvasContext: pdfCanvas.getContext('2d'), viewport: vp }).promise;
+      currentPage = num;
+      localStorage.setItem('page::' + currentPath, num);
+      // update that book's progress bar live
+      const idx  = books.findIndex(b => b.path === currentPath);
+      const fill = document.getElementById('fill-' + idx);
+      if (fill && currentDoc.numPages > 1) {
+        fill.style.width = Math.round(((num - 1) / (currentDoc.numPages - 1)) * 100) + '%';
+      }
+      updateReaderUI();
+    } catch (e) { console.error(e); }
+    finally { rendering = false; setRLoading(false); }
+  }
+
+  function updateReaderUI() {
+    const total = currentDoc ? currentDoc.numPages : 0;
+    pageNum.textContent = currentPage + ' / ' + total;
+    prevBtn.disabled    = currentPage <= 1;
+    nextBtn.disabled    = currentPage >= total;
+  }
+
+  function closeReader() {
+    reader.style.display = 'none';
+    page.style.display   = 'flex';
+    currentDoc = null; currentPath = ''; currentPage = 1;
+    pageNum.textContent = '-- / --';
+  }
+
+  function setRLoading(on) { rLoading.classList.toggle('on', on); }
+
+  backBtn.addEventListener('click', closeReader);
+  nextBtn.addEventListener('click', () => { if (currentPage < currentDoc.numPages) renderReaderPage(currentPage + 1); });
+  prevBtn.addEventListener('click', () => { if (currentPage > 1) renderReaderPage(currentPage - 1); });
+  document.addEventListener('keydown', e => {
+    if (reader.style.display === 'none') return;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextBtn.click();
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   prevBtn.click();
+    if (e.key === 'Escape') closeReader();
+  });
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+  function cleanName(path) {
+    return path.split('/').pop().replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ');
+  }
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Boot
+  requestAnimationFrame(() => requestAnimationFrame(loadLibrary));
+</script>
 </body>
 </html>
