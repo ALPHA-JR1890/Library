@@ -1,0 +1,107 @@
+:root{
+  --bg:#f5f0e8;
+  --text:#1a1612;
+  --muted:#7f7568;
+  --accent:#b5401a;
+  --blue:#3b82f6;
+  --blue-bg:#dbeafe;
+  --shadow:rgba(0,0,0,.16);
+  --ease:cubic-bezier(.16,1,.3,1);
+  --font:'Happy Monkey', cursive;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+html,body{
+  width:100%;height:100%;
+  overflow:hidden;
+  background:var(--bg);
+  font-family:var(--font);
+  user-select:none;
+}
+
+/* ===== LIBRARY ===== */
+#library{
+  width:100%;height:100%;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+#library-title{
+  position:absolute;
+  top:28px;left:0;right:0;
+  text-align:center;
+  font-size:1.15rem;
+}
+
+/* SETTINGS */
+#settings-btn{
+  position:absolute;
+  top:18px;right:20px;
+  background:none;
+  border:none;
+  font-size:1.3rem;
+  cursor:pointer;
+}
+
+#settings-panel{
+  position:absolute;
+  top:58px;right:16px;
+  background:#fffcf7;
+  border:1px solid rgba(0,0,0,.1);
+  border-radius:14px;
+  padding:16px;
+  width:230px;
+  display:none;
+  flex-direction:column;
+  gap:16px;
+}
+#settings-panel.open{display:flex;}
+
+.settings-row{display:flex;gap:8px;}
+.seg-btn,.sort-btn{
+  flex:1;
+  padding:7px;
+  border-radius:8px;
+  border:1px solid rgba(0,0,0,.12);
+  background:transparent;
+  cursor:pointer;
+}
+.seg-btn.active,.sort-btn.active{
+  background:var(--accent);
+  color:#fff;
+}
+
+/* CAROUSEL */
+.carousel{width:100%;height:100%;display:flex;justify-content:center;align-items:center;}
+.track{display:flex;gap:28px;transition:transform .5s var(--ease);padding:0 100px;}
+
+.book{opacity:.4;transform:scale(.82);transition:.4s;}
+.book.active{opacity:1;transform:scale(1);}
+
+.cover{
+  width:140px;height:200px;
+  background:#ddd;
+  border-radius:3px 8px 8px 3px;
+}
+
+/* GRID */
+#grid-view{display:none;width:100%;height:100%;overflow:auto;padding:80px 24px;}
+#grid-view.active{display:block;}
+
+.grid-inner{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:16px;
+}
+
+/* READER */
+#reader{
+  position:fixed;
+  inset:0;
+  display:none;
+  background:var(--bg);
+}
+#reader.active{display:flex;}
