@@ -149,6 +149,7 @@ html,body{
   border-color:var(--accent);
 }
 
+
 /* ===== CAROUSEL VIEW ===== */
 
 .carousel{
@@ -384,6 +385,7 @@ html,body{
       </div>
     </div>
 
+
   </div>
 
   <div class="carousel" id="carousel">
@@ -567,15 +569,17 @@ async function loadLibrary(){
   // Apply persisted view mode (after books & thumbnails are kicked off)
   applyViewMode(viewMode);
 
-  track.addEventListener('click', e=>{
-    const book = e.target.closest('.book');
-    if(!book) return;
-    const i = Number(book.dataset.index);
-    if(i === focused){ openBook(i); }
-    else{ focused = i; updateCarousel(); }
-  });
-
-  setupDragging();
+  if(!track._clickBound){
+    track._clickBound = true;
+    track.addEventListener('click', e=>{
+      const book = e.target.closest('.book');
+      if(!book) return;
+      const i = Number(book.dataset.index);
+      if(i === focused){ openBook(i); }
+      else{ focused = i; updateCarousel(); }
+    });
+    setupDragging();
+  }
 }
 
 /* ===== REBUILD CAROUSEL (after sort) ===== */
