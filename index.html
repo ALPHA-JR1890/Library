@@ -725,7 +725,8 @@ async function renderPdfThumbnail(pdfjsLib, i, book){
     const doc = await pdfjsLib.getDocument({
       url,
       stopAtErrors: false,
-      ignoreErrors: true
+      ignoreErrors: true,
+      disableAutoFetch: false
     }).promise;
     localStorage.setItem('total::'+book.path, doc.numPages);
     const savedPage = Number(localStorage.getItem('page::'+book.path))||1;
@@ -736,10 +737,18 @@ async function renderPdfThumbnail(pdfjsLib, i, book){
     const vp = page.getViewport({scale:0.42});
     const c = document.createElement('canvas');
     c.width=vp.width; c.height=vp.height;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#f5f0e8';
+    ctx.fillRect(0, 0, c.width, c.height);
+    
     try{
-      await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+      await page.render({
+        canvasContext: ctx,
+        viewport: vp,
+        enableWebGL: false
+      }).promise;
     }catch(renderErr){
-      console.warn('Partial render for', book.title, renderErr.message);
+      console.warn('Render error for', book.title, renderErr.message);
     }
 
     thumbnailCache[i] = c;
