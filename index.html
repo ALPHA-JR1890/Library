@@ -47,9 +47,7 @@ body{
   user-select:none;
 }
 
-/* =====================================
-   LIBRARY
-===================================== */
+
 
 #library{
   width:100%;
@@ -104,9 +102,6 @@ body{
   will-change:transform;
 }
 
-/* =====================================
-   BOOK
-===================================== */
 
 .book{
   flex-shrink:0;
@@ -209,9 +204,7 @@ body{
   }
 }
 
-/* =====================================
-   PROGRESS
-===================================== */
+
 
 .progress{
   width:100%;
@@ -239,9 +232,7 @@ body{
   transition:width .35s ease;
 }
 
-/* =====================================
-   READER
-===================================== */
+
 
 #reader{
   position:fixed;
@@ -271,9 +262,6 @@ body{
   transform:scale(1);
 }
 
-/* =====================================
-   TOP BAR
-===================================== */
 
 .reader-top{
   position:absolute;
@@ -335,9 +323,7 @@ body{
   transition:width .35s ease;
 }
 
-/* =====================================
-   CANVAS
-===================================== */
+
 
 .page-wrap{
   flex:1;
@@ -369,9 +355,7 @@ body{
   }
 }
 
-/* =====================================
-   NAVIGATION ZONES
-===================================== */
+
 
 .nav{
   position:fixed;
@@ -391,9 +375,6 @@ body{
   right:0;
 }
 
-/* =====================================
-   BACK BUTTON
-===================================== */
 
 #back-btn{
   position:absolute;
@@ -414,9 +395,6 @@ body{
   cursor:pointer;
 }
 
-/* =====================================
-   MOBILE
-===================================== */
 
 @media(max-width:700px){
 
@@ -441,9 +419,7 @@ body{
 </head>
 <body>
 
-<!-- =====================================
-     LIBRARY
-===================================== -->
+
 
 <div id="library">
 
@@ -457,9 +433,7 @@ body{
 
 </div>
 
-<!-- =====================================
-     READER
-===================================== -->
+
 
 <div id="reader">
 
@@ -509,9 +483,7 @@ async function getPdfjsLib(){
   throw new Error('PDF.js failed to load');
 }
 
-/* =====================================
-   DOM
-===================================== */
+
 
 const track =
 document.getElementById('track');
@@ -541,9 +513,7 @@ document.getElementById('nav-left');
 const navRight =
 document.getElementById('nav-right');
 
-/* =====================================
-   STATE
-===================================== */
+
 
 let books = [];
 
@@ -553,9 +523,7 @@ let currentDoc = null;
 let currentPage = 1;
 let currentBook = null;
 
-/* =====================================
-   LOAD LIBRARY
-===================================== */
+
 
 async function loadLibrary(){
 
@@ -654,9 +622,6 @@ async function loadLibrary(){
   setupDragging();
 }
 
-/* =====================================
-   UPDATE CAROUSEL
-===================================== */
 
 function updateCarousel(){
 
@@ -692,9 +657,7 @@ function updateCarousel(){
   }
 }
 
-/* =====================================
-   DRAGGING
-===================================== */
+
 
 function setupDragging(){
 
@@ -779,9 +742,6 @@ function setupDragging(){
   );
 }
 
-/* =====================================
-   THUMBNAILS
-===================================== */
 
 async function renderThumbnail(pdfjsLib, i){
 
@@ -847,9 +807,6 @@ async function renderThumbnail(pdfjsLib, i){
   }
 }
 
-/* =====================================
-   OPEN BOOK
-===================================== */
 
 async function openBook(i){
 
@@ -899,9 +856,7 @@ async function openBook(i){
   });
 }
 
-/* =====================================
-   RENDER PAGE
-===================================== */
+
 
 async function renderPage(num){
 
@@ -931,18 +886,18 @@ async function renderPage(num){
 
   currentPage = num;
 
-  /* SAVE PAGE */
+  
 
   localStorage.setItem(
     'page::' + currentBook.path,
     num
   );
 
-  /* PAGE TEXT */
+  
 
 
 
-  /* TOP BAR PROGRESS */
+  
 
   const percent =
   ((num - 1) / (currentDoc.numPages - 1)) * 100;
@@ -950,7 +905,7 @@ async function renderPage(num){
   readerProgressFill.style.width =
   percent + '%';
 
-  /* LIBRARY PROGRESS */
+  
 
   const idx =
   books.findIndex(
@@ -967,9 +922,6 @@ async function renderPage(num){
   }
 }
 
-/* =====================================
-   NAVIGATION
-===================================== */
 
 navLeft.addEventListener('click',()=>{
 
@@ -988,9 +940,7 @@ navRight.addEventListener('click',()=>{
   }
 });
 
-/* =====================================
-   CLOSE READER
-===================================== */
+
 
 backBtn.addEventListener('click',()=>{
 
@@ -1003,9 +953,7 @@ backBtn.addEventListener('click',()=>{
   },300);
 });
 
-/* =====================================
-   KEYBOARD
-===================================== */
+
 
 window.addEventListener('keydown', e=>{
 
@@ -1057,9 +1005,7 @@ window.addEventListener('keydown', e=>{
   }
 });
 
-/* =====================================
-   HELPERS
-===================================== */
+
 
 function cleanName(path){
 
@@ -1070,9 +1016,7 @@ function cleanName(path){
     .replace(/[_-]/g,' ');
 }
 
-/* =====================================
-   START
-===================================== */
+  
 
 loadLibrary();
 
